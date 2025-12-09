@@ -1,0 +1,50 @@
+# Checkpoints and model weights
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+
+# Results and outputs
+results/
+val/
+eval/
+spline_analysis_synthetic/
+
+# Logs
+logs/
+wandb/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Environment
+.env
+.venv
+env/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (if any large datasets)
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.pkl
+*.pickle

@@ -1,0 +1,116 @@
+# W&B Sweep Configuration for Hyperparameter Tuning
+# This file defines hyperparameters to search over for depth estimation model
+
+program: train.py
+method: bayes  # Options: grid, random, bayes
+# bayes: Bayesian optimization (recommended for efficient search)
+# grid: Exhaustive grid search (good for small spaces)
+# random: Random search (simple baseline)
+
+metric:
+  name: val/abs_rel  # Primary metric to optimize
+  goal: minimize     # Lower is better for ABS_REL
+
+parameters:
+  # Dataset selection
+  dataset:
+    value: batvisionv2  # Fixed to batvisionv2, change if needed
+  
+  # Learning hyperparameters
+  # learning_rate:
+  #   distribution: log_uniform
+  #   min: 0.0001
+  #   max: 0.01
+    # Paper: 0.002 for BV2, 0.001 for BV1
+    # IMPORTANT: Keep max <= 0.01 to prevent training instability
+    # Values > 0.1 will cause model divergence and negative predictions
+  
+  learning_rate:
+    distribution: log_uniform_values
+    min: 1e-4
+    max: 1e-2
+
+  batch_size:
+    values: [128, 256] #128 512, 
+    # Paper: 256 for BV2, 128 for BV1
+  
+  # Optimizer selection
+  optimizer:
+    values: [Adam, AdamW, SGD]
+    # Paper: AdamW
+  
+  # Loss function selection
+  criterion:
+    values: [L1, SIlog, Combined]
+    # L1: Standard L1 loss
+    # SIlog: Scale-Invariant Logarithmic loss
+    # Combined: Weighted combination of L1 and SIlog
+  
+  # Audio format selection
+  audio_format:
+    values: [spectrogram, mel_spectrogram, waveform]
+    # spectrogram: Regular spectrogram (STFT)
+    # mel_spectrogram: Mel spectrogram (recommended for BV2)
+    # waveform: Raw waveform (no transformation)
+    # Note: mel_spectrogram is only available for batvisionv2
+  
+  # SIlog loss hyperparameters (only used when criterion is SIlog or Combined)
+  silog_lambda:
+    distribution: uniform
+    min: 0.1
+    max: 0.9
+    # Typical range: 0.3-0.7, default: 0.5
+    # Note: Only optimized when criterion is SIlog or Combined
+  
+  # Combined loss weights (only used when criterion is Combined)
+  l1_weight:
+    distribution: uniform
+    min: 0.1
+    max: 0.9
+    # Weight for L1 component in combined loss
+    # Note: Only optimized when criterion is Combined
+  
+  silog_weight:
+    distribution: uniform
+    min: 0.1
+    max: 0.9
+    # Weight for SIlog component in combined loss
+    # Note: l1_weight + silog_weight should ideally sum to 1.0
+    # Note: Only optimized when criterion is Combined
+  
+  # Model architecture hyperparameters (if you want to tune these)
+  # Note: These require modifying the model definition code
+  # ngf:
+  #   values: [32, 64, 128]
+  #   # Number of generator filters in first conv layer
+  
+  # init_type:
+  #   values: [normal, xavier, kaiming, orthogonal]
+  #   # Weight initialization method
+  
+  # init_gain:
+  #   distribution: uniform
+  #   min: 0.01
+  #   max: 0.1
+  #   # Initialization gain factor
+
+# Command to run training
+# Note: train.py will automatically read hyperparameters from wandb.config when running in a sweep
+# No need to pass them as command line arguments - wandb handles this automatically
+command:
+  - python
+  - train.py
+  - --use_wandb
+  - --wandb_project
+  - batvision-depth-estimation
+
+# Additional sweep settings
+early_terminate:
+  type: hyperband
+  min_iter: 20      # Minimum epochs before early stopping
+  eta: 2            # Elimination rate (keep 1/eta runs each round)
+  max_iter: 60     # Maximum epochs per run
+
+# Run configuration
+run_cap: 100         # Maximum number of runs in this sweep
+
