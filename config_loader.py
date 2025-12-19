@@ -95,4 +95,3 @@ def load_config(dataset_name='batvisionv2', mode='train', experiment_name='defau
     cfg.model = SimpleNamespace(**model_cfg)
     
     return cfg
-

@@ -38,8 +38,8 @@ class BaseResidualLoss(nn.Module):
     
     def __init__(self, 
                  lambda_recon=1.0,
-                 lambda_base=0.8,
-                 lambda_sparse=0.2,
+                 lambda_base=1.2,
+                 lambda_sparse=0.05,
                  lowpass_kernel=16,
                  use_l1=True):
         super().__init__()
@@ -164,10 +164,10 @@ class AdaptiveBaseResidualLoss(nn.Module):
     """
     
     def __init__(self,
-                 lambda_recon_init=0.5,
-                 lambda_base_init=1.5,
-                 lambda_sparse=0.3,
-                 warmup_epochs=20,
+                 lambda_recon_init=0.3,
+                 lambda_base_init=2.0,
+                 lambda_sparse=0.05,
+                 warmup_epochs=50,
                  lowpass_kernel=16):
         super().__init__()
         

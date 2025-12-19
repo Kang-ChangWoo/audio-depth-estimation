@@ -117,11 +117,15 @@ class BaseResidualDepthNet(nn.Module):
         # Base Decoder (Coarse Depth / Room Layout)
         # ==========================================
         # Goal: Capture low-frequency components (walls, floor, ceiling)
-        self.base_up1 = Up(base_channels * 16, base_channels * 8 // factor, bilinear)
-        self.base_up2 = Up(base_channels * 8, base_channels * 4 // factor, bilinear)
-        self.base_up3 = Up(base_channels * 4, base_channels * 2 // factor, bilinear)
-        self.base_up4 = Up(base_channels * 2, base_channels, bilinear)
-        self.base_head = nn.Conv2d(base_channels, 1, kernel_size=1)
+        # CRITICAL: Use fewer OUTPUT channels to force generalization!
+        # INPUT channels = concat(previous_output + skip_connection)
+        # 
+        # Concat sizes: up1=512+512, up2=128+256, up3=64+128, up4=32+64
+        self.base_up1 = Up(1024, 128, bilinear)  # 512+512 -> 128 (vs 256 for residual)
+        self.base_up2 = Up(384, 64, bilinear)    # 128+256 -> 64 (vs 128 for residual)
+        self.base_up3 = Up(192, 32, bilinear)    # 64+128 -> 32 (vs 64 for residual)
+        self.base_up4 = Up(96, 16, bilinear)     # 32+64 -> 16 (vs 64 for residual)
+        self.base_head = nn.Conv2d(16, 1, kernel_size=1)
         
         # ==========================================
         # Residual Decoder (Fine Details)
@@ -194,8 +198,8 @@ class BaseResidualDepthNet(nn.Module):
         residual_raw = self.res_head(r)  # [B, 1, H, W]
         
         # CRITICAL: Residual은 +/- 허용 (보정값)
-        # Tanh로 제한하고 max_depth의 20%까지만 허용
-        residual = torch.tanh(residual_raw) * (self.max_depth * 0.2)
+        # Tanh로 제한하고 max_depth의 30%까지 허용 (Base 용량 줄었으니 Residual이 더 많이)
+        residual = torch.tanh(residual_raw) * (self.max_depth * 0.3)
         
         # Ensure output size matches target
         if residual.shape[-2:] != (self.output_size, self.output_size):

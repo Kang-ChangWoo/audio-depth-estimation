@@ -48,3 +48,12 @@ Thumbs.db
 *.hdf5
 *.pkl
 *.pickle
+
+__pycache__
+*.egg-info
+*.pyc
+*.so
+build
+dist
+.checkpoints
+.ipynb_checkpoints

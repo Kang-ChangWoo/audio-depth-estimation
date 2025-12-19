@@ -199,8 +199,9 @@ class UnetSkipConnectionBlock(nn.Module):
             down = [downconv]
 
             if cfg.dataset.depth_norm:
-                # PROBLEM 1 FIX: Remove Sigmoid to allow model to output beyond 0~1 range
-                up = [uprelu, upconv]  # Sigmoid removed
+                # FIX: Add Sigmoid to ensure output is in [0, 1] range when depth_norm=True
+                # This prevents negative depth predictions and stabilizes training
+                up = [uprelu, upconv, nn.Sigmoid()]
             else:
                 up = [uprelu, upconv, nn.ReLU()]
             model = down + [submodule] + up

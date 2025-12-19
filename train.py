@@ -120,8 +120,8 @@ Examples:
                           help='Metric to use for best model selection (default: rmse, lower is better for all except delta1)')
     group_val.add_argument('--wandb_project', type=str, default='batvision-depth-estimation',
                           help='W&B project name')
-    group_val.add_argument('--wandb_entity', type=str, default=None,
-                          help='W&B entity/team name (optional)')
+    group_val.add_argument('--wandb_entity', type=str, default='branden',
+                          help='W&B entity/team name (default: branden)')
     group_val.add_argument('--wandb_mode', type=str, default='online', 
                           choices=['online', 'offline', 'disabled'],
                           help='W&B logging mode')

@@ -131,13 +131,13 @@ Examples:
                        help='Use adaptive loss weights (curriculum learning)')
     parser.add_argument('--lambda_recon', type=float, default=1.0,
                        help='Weight for reconstruction loss')
-    parser.add_argument('--lambda_base', type=float, default=0.8,
+    parser.add_argument('--lambda_base', type=float, default=1.2,
                        help='Weight for base structural loss')
-    parser.add_argument('--lambda_sparse', type=float, default=0.2,
+    parser.add_argument('--lambda_sparse', type=float, default=0.05,
                        help='Weight for residual sparsity')
     parser.add_argument('--lowpass_kernel', type=int, default=16,
                        help='Kernel size for low-pass filtering (larger = coarser base)')
-    parser.add_argument('--warmup_epochs', type=int, default=20,
+    parser.add_argument('--warmup_epochs', type=int, default=50,
                        help='Epochs for adaptive loss warmup')
     
     # Training
@@ -153,8 +153,8 @@ Examples:
     
     # W&B
     parser.add_argument('--use_wandb', action='store_true', default=False)
-    parser.add_argument('--wandb_project', type=str, default='batvision-base-residual')
-    parser.add_argument('--wandb_entity', type=str, default=None)
+    parser.add_argument('--wandb_project', type=str, default='batvision-depth-estimation')
+    parser.add_argument('--wandb_entity', type=str, default='branden')
     
     # Experiment
     parser.add_argument('--experiment_name', type=str, default='base_res_default')

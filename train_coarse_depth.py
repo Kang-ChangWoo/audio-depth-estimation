@@ -192,8 +192,8 @@ def main():
     
     # Wandb
     parser.add_argument('--use_wandb', action='store_true', default=False)
-    parser.add_argument('--wandb_project', type=str, default='coarse-depth')
-    parser.add_argument('--wandb_entity', type=str, default=None)
+    parser.add_argument('--wandb_project', type=str, default='batvision-depth-estimation')
+    parser.add_argument('--wandb_entity', type=str, default='branden')
     
     args = parser.parse_args()
     

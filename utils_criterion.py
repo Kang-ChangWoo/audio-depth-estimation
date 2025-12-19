@@ -13,7 +13,8 @@ def compute_errors(gt, pred, min_depth_threshold=0.0):
                             Set to 0.0 to include all valid pixels, or 0.1 to match training threshold
     """
     # Use threshold to filter pixels (default: 0.0 to include all valid pixels)
-    mask = gt > min_depth_threshold
+    # mask = gt > min_depth_threshold
+    mask = gt != 0.0
     if mask.sum() == 0:
         # If no valid GT pixels, return zeros
         return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0

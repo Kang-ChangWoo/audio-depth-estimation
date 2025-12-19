@@ -7,6 +7,6 @@ annotation_file_test: test.csv
 # transform parameters
 audio_format: mel_spectrogram  # Options: 'spectrogram' (paper), 'mel_spectrogram', 'waveform'
 preprocess: resize # 'resize' or None
-depth_norm: True # Normalize depth using max_depth value
+depth_norm: False # Normalize depth using max_depth value
 images_size: 256 # Image size if resize
 max_depth: 30.0 # Maximum depth value in meters

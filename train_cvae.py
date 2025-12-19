@@ -67,7 +67,7 @@ def main():
         help="W&B project name",
     )
     parser.add_argument(
-        "--wandb_entity", type=str, default=None, help="W&B entity/team name (optional)"
+        "--wandb_entity", type=str, default="branden", help="W&B entity/team name (default: branden)"
     )
     parser.add_argument(
         "--wandb_mode",
