@@ -507,7 +507,18 @@ Examples:
                             gtdepth[valid_mask].cpu().numpy(),
                             pred_depth[valid_mask].cpu().numpy()
                         )
-                        val_metrics.append(errors)
+                        # Convert tuple to dictionary
+                        abs_rel, rmse, a1, a2, a3, log_10, mae = errors
+                        errors_dict = {
+                            'abs_rel': abs_rel,
+                            'rmse': rmse,
+                            'delta1': a1,
+                            'delta2': a2,
+                            'delta3': a3,
+                            'log_10': log_10,
+                            'mae': mae
+                        }
+                        val_metrics.append(errors_dict)
                     
                     # Visualize first batch
                     if batch_idx == 0:
