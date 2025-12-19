@@ -235,7 +235,9 @@ Examples:
     experiment_name = args.experiment_name
     
     # Create directories
-    results_dir = os.path.join(cfg.training.save_path, experiment_name)
+    log_dir = f"./logs/{experiment_name}/"
+    results_dir = f"./results/{experiment_name}/"
+    os.makedirs(log_dir, exist_ok=True)
     os.makedirs(results_dir, exist_ok=True)
     
     print("=" * 60)
