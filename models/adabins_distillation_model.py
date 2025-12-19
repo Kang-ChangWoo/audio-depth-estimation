@@ -160,10 +160,12 @@ class AdaBinsDecoder(nn.Module):
         self.output_size = output_size
         
         # Decoder path
-        self.up1 = Up(base_channels * 16, base_channels * 8, bilinear=True)
-        self.up2 = Up(base_channels * 8, base_channels * 4, bilinear=True)
-        self.up3 = Up(base_channels * 4, base_channels * 2, bilinear=True)
-        self.up4 = Up(base_channels * 2, base_channels, bilinear=True)
+        # INPUT channels = concat(previous_output + skip_connection)
+        # Encoder outputs: x1=64, x2=128, x3=256, x4=512, x5=512
+        self.up1 = Up(1024, base_channels * 8, bilinear=True)  # 512+512 -> 512
+        self.up2 = Up(768, base_channels * 4, bilinear=True)   # 512+256 -> 256
+        self.up3 = Up(384, base_channels * 2, bilinear=True)   # 256+128 -> 128
+        self.up4 = Up(192, base_channels, bilinear=True)       # 128+64 -> 64
         
         # Classification head
         self.class_head = nn.Conv2d(base_channels, n_bins, kernel_size=1)
