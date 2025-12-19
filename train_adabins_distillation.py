@@ -209,7 +209,7 @@ Examples:
     device = torch.device(f'cuda:{gpu_ids[0]}' if torch.cuda.is_available() else 'cpu')
     
     # Load config
-    cfg = load_config(dataset_name=args.dataset, generator='unet', mode='depth')
+    cfg = load_config(dataset_name=args.dataset, mode='train', model_name='unet_baseline')
     
     # Override config with args
     if args.batch_size is not None:
