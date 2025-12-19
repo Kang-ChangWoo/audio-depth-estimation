@@ -26,43 +26,113 @@ WANDB_AVAILABLE = True
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Train U-Net model on Batvision dataset')
-    parser.add_argument('--dataset', type=str, default='batvisionv2', choices=['batvisionv1', 'batvisionv2'],
-                        help='Dataset to use')
-    parser.add_argument('--experiment_name', type=str, default='default',
-                        help='Name of the experiment')
-    parser.add_argument('--checkpoints', type=int, default=None,
-                        help='Checkpoint epoch to resume from (None to start from scratch)')
-    parser.add_argument('--batch_size', type=int, default=None,
-                        help='Batch size (overrides config, paper: 256)')
-    parser.add_argument('--learning_rate', type=float, default=None,
-                        help='Learning rate (overrides config, paper: 0.002 for BV2, 0.001 for BV1)')
-    parser.add_argument('--use_wandb', action='store_true', default=False,
-                        help='Enable Weights & Biases logging')
-    parser.add_argument('--wandb_project', type=str, default='batvision-depth-estimation',
-                        help='W&B project name')
-    parser.add_argument('--wandb_entity', type=str, default=None,
-                        help='W&B entity/team name (optional)')
-    parser.add_argument('--wandb_mode', type=str, default='online', choices=['online', 'offline', 'disabled'],
-                        help='W&B logging mode')
-    # Sweep hyperparameters (overrides config if provided)
-    parser.add_argument('--criterion', type=str, default=None, choices=['L1', 'SIlog', 'Combined'],
-                        help='Loss function (overrides config)')
-    parser.add_argument('--optimizer', type=str, default=None, choices=['Adam', 'AdamW', 'SGD'],
-                        help='Optimizer (overrides config)')
-    parser.add_argument('--silog_lambda', type=float, default=None,
-                        help='SIlog lambda parameter (overrides config)')
-    parser.add_argument('--l1_weight', type=float, default=None,
-                        help='L1 weight for combined loss (overrides config)')
-    parser.add_argument('--silog_weight', type=float, default=None,
-                        help='SIlog weight for combined loss (overrides config)')
-    parser.add_argument('--audio_format', type=str, default=None, 
-                        choices=['spectrogram', 'mel_spectrogram', 'waveform'],
-                        help='Audio format: spectrogram, mel_spectrogram, or waveform (overrides config)')
-    parser.add_argument('--validation', type=lambda x: (str(x).lower() == 'true'), default=None,
-                        help='Enable validation (True/False, overrides config)')
-    parser.add_argument('--validation_iter', type=int, default=None,
-                        help='Validation frequency: evaluate every N epochs (overrides config)')
+    parser = argparse.ArgumentParser(
+        description='Train U-Net model on Batvision dataset for depth estimation',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Basic training with default settings
+  python train.py --dataset batvisionv2 --use_wandb
+  
+  # Training with custom hyperparameters
+  python train.py --dataset batvisionv2 --batch_size 128 --learning_rate 0.001 --criterion SIlog
+  
+  # Combined loss with custom weights (auto-detected, no --criterion needed)
+  python train.py --l1_weight 0.8 --silog_weight 0.2
+  
+  # Disable SIlog (Combined mode auto-detected)
+  python train.py --use_silog false
+  
+  # Resume from checkpoint
+  python train.py --checkpoints 50 --experiment_name my_experiment
+  
+  # Image-based baseline (for comparison)
+  python train.py --eval_img --max_depth 80.0
+  
+  # Track best model with W&B (saves best model based on validation RMSE)
+  python train.py --use_wandb --save_best_model --best_metric rmse
+  
+  # Sequence holdout to check overfitting
+  python train.py --sequence_holdout --holdout_test_seq Salle_Chevalier --holdout_eval_seq 3rd_Floor_Luxembourg
+  
+  # Full overfitting check with best model tracking
+  python train.py --use_wandb --save_best_model --sequence_holdout --holdout_test_seq Salle_Chevalier
+        """
+    )
+    
+    # ========== Dataset & Model ==========
+    group_data = parser.add_argument_group('Dataset & Model')
+    group_data.add_argument('--dataset', type=str, default='batvisionv2', 
+                           choices=['batvisionv1', 'batvisionv2'],
+                           help='Dataset to use (default: batvisionv2)')
+    group_data.add_argument('--audio_format', type=str, default=None, 
+                           choices=['spectrogram', 'mel_spectrogram', 'waveform'],
+                           help='Audio format (overrides config). Note: mel_spectrogram not supported for BV1')
+    group_data.add_argument('--eval_img', action='store_true', default=False,
+                           help='Use RGB camera images instead of audio (for baseline comparison)')
+    group_data.add_argument('--max_depth', type=float, default=None,
+                           help='Maximum depth value in meters (default: 30.0, use 80.0 for image-based)')
+    group_data.add_argument('--sequence_holdout', action='store_true', default=False,
+                           help='Enable sequence-level holdout: exclude one sequence for test, one for eval')
+    group_data.add_argument('--holdout_test_seq', type=str, default=None,
+                           help='Sequence name to hold out for testing (e.g., "Salle_Chevalier")')
+    group_data.add_argument('--holdout_eval_seq', type=str, default=None,
+                           help='Sequence name to hold out for evaluation (e.g., "3rd_Floor_Luxembourg")')
+    
+    # ========== Training Hyperparameters ==========
+    group_train = parser.add_argument_group('Training Hyperparameters')
+    group_train.add_argument('--batch_size', type=int, default=None,
+                            help='Batch size (overrides config, paper default: 256)')
+    group_train.add_argument('--learning_rate', '--lr', type=float, default=None,
+                            help='Learning rate (overrides config, paper: 0.002 for BV2, 0.001 for BV1)')
+    group_train.add_argument('--optimizer', type=str, default=None, 
+                            choices=['Adam', 'AdamW', 'SGD'],
+                            help='Optimizer (overrides config)')
+    
+    # ========== Loss Function ==========
+    group_loss = parser.add_argument_group('Loss Function')
+    group_loss.add_argument('--criterion', type=str, default=None, 
+                           choices=['L1', 'SIlog', 'Combined'],
+                           help='Loss function (optional): L1, SIlog, or Combined. '
+                                'Auto-detected if loss weights are specified.')
+    group_loss.add_argument('--use_silog', type=lambda x: (str(x).lower() == 'true'), default=None,
+                           help='Enable/disable SIlog loss. If specified, auto-enables Combined mode. '
+                                'Default: True if Combined, N/A otherwise')
+    group_loss.add_argument('--silog_lambda', type=float, default=None,
+                           help='SIlog lambda parameter (default: 0.5, controls scale-invariance)')
+    group_loss.add_argument('--l1_weight', type=float, default=None,
+                           help='L1 loss weight. If specified, auto-enables Combined mode (default: 0.5)')
+    group_loss.add_argument('--silog_weight', type=float, default=None,
+                           help='SIlog loss weight. If specified, auto-enables Combined mode (default: 0.5)')
+    
+    # ========== Validation & Logging ==========
+    group_val = parser.add_argument_group('Validation & Logging')
+    group_val.add_argument('--validation', type=lambda x: (str(x).lower() == 'true'), default=None,
+                          help='Enable validation (True/False, overrides config)')
+    group_val.add_argument('--validation_iter', type=int, default=None,
+                          help='Validation frequency in epochs (overrides config)')
+    group_val.add_argument('--use_wandb', action='store_true', default=False,
+                          help='Enable Weights & Biases logging')
+    group_val.add_argument('--save_best_model', action='store_true', default=False,
+                          help='Save best model based on validation RMSE (requires --use_wandb)')
+    group_val.add_argument('--best_metric', type=str, default='rmse',
+                          choices=['rmse', 'abs_rel', 'delta1', 'mae', 'loss'],
+                          help='Metric to use for best model selection (default: rmse, lower is better for all except delta1)')
+    group_val.add_argument('--wandb_project', type=str, default='batvision-depth-estimation',
+                          help='W&B project name')
+    group_val.add_argument('--wandb_entity', type=str, default=None,
+                          help='W&B entity/team name (optional)')
+    group_val.add_argument('--wandb_mode', type=str, default='online', 
+                          choices=['online', 'offline', 'disabled'],
+                          help='W&B logging mode')
+    
+    # ========== Experiment Management ==========
+    group_exp = parser.add_argument_group('Experiment Management')
+    group_exp.add_argument('--experiment_name', type=str, default='default',
+                          help='Experiment name suffix (auto-generated name includes model/dataset info)')
+    group_exp.add_argument('--checkpoints', type=int, default=None,
+                          help='Checkpoint epoch to resume from (None to start from scratch)')
+    
     args = parser.parse_args()
     
     # If running in wandb sweep, initialize wandb early to access config
@@ -137,6 +207,13 @@ def main():
     if args.checkpoints is not None:
         cfg.mode.checkpoints = args.checkpoints
     
+    # Override max_depth if provided (useful for image-based models)
+    if args.max_depth is not None:
+        cfg.dataset.max_depth = args.max_depth
+        print(f"Max depth overridden to: {cfg.dataset.max_depth}m")
+        if args.eval_img and args.max_depth > 30.0:
+            print(f"Note: Using larger max_depth for image-based model to capture far objects")
+    
     # Override batch size and learning rate based on paper settings if not provided
     if args.batch_size is not None:
         cfg.mode.batch_size = args.batch_size
@@ -207,19 +284,49 @@ def main():
     batch_size = cfg.mode.batch_size
     
     # ------------ Create experiment name -----------
-    experiment_name = cfg.model.generator + '_' +  cfg.dataset.name + '_' + 'BS' + str(cfg.mode.batch_size) + '_' + 'Lr' + str(cfg.mode.learning_rate) + '_' + cfg.mode.optimizer + '_' + cfg.mode.experiment_name
+    experiment_name = cfg.model.generator + '_' +  cfg.dataset.name + '_' + 'BS' + str(cfg.mode.batch_size) + '_' + 'Lr' + str(cfg.mode.learning_rate) + '_' + cfg.mode.optimizer
+    if args.eval_img:
+        experiment_name += '_IMG'  # Mark experiments using images
+    if args.max_depth is not None and args.max_depth != 30.0:
+        experiment_name += f'_MD{int(args.max_depth)}'  # Mark non-standard max_depth
+    
+    # ------------ Setup sequence holdout -----------
+    holdout_sequences = []
+    if args.sequence_holdout:
+        if args.holdout_test_seq:
+            holdout_sequences.append(args.holdout_test_seq)
+        if args.holdout_eval_seq:
+            holdout_sequences.append(args.holdout_eval_seq)
+        
+        if len(holdout_sequences) == 0:
+            raise ValueError("--sequence_holdout requires --holdout_test_seq and/or --holdout_eval_seq")
+        
+        experiment_name += '_holdout_' + '_'.join(holdout_sequences)
+        print(f"\n{'='*60}")
+        print(f"SEQUENCE HOLDOUT MODE ENABLED")
+        print(f"{'='*60}")
+        print(f"Held out sequences (excluded from training): {holdout_sequences}")
+        print(f"These sequences will be used to check overfitting")
+        print(f"{'='*60}\n")
+    
+    experiment_name += '_' + cfg.mode.experiment_name
     
     # ------------ Create dataset -----------
+    
+    # Prepare location blacklist for sequence holdout
+    location_blacklist = holdout_sequences if args.sequence_holdout else None
         
     # Use corresponding dataset class
     if cfg.dataset.name == 'batvisionv1':
-        train_set = BatvisionV1Dataset(cfg, cfg.dataset.annotation_file_train)
+        if args.eval_img:
+            raise ValueError("BatvisionV1 dataset does not support --eval_img. Use batvisionv2 instead.")
+        train_set = BatvisionV1Dataset(cfg, cfg.dataset.annotation_file_train, location_blacklist=location_blacklist)
         if cfg.mode.validation:
-            val_set = BatvisionV1Dataset(cfg, cfg.dataset.annotation_file_val)
+            val_set = BatvisionV1Dataset(cfg, cfg.dataset.annotation_file_val, location_blacklist=location_blacklist)
     elif cfg.dataset.name == 'batvisionv2':
-        train_set = BatvisionV2Dataset(cfg, cfg.dataset.annotation_file_train) 
+        train_set = BatvisionV2Dataset(cfg, cfg.dataset.annotation_file_train, location_blacklist=location_blacklist, use_image=args.eval_img) 
         if cfg.mode.validation:
-            val_set = BatvisionV2Dataset(cfg, cfg.dataset.annotation_file_val) 
+            val_set = BatvisionV2Dataset(cfg, cfg.dataset.annotation_file_val, location_blacklist=location_blacklist, use_image=args.eval_img)
     else:
         raise Exception('Training can be done only on BV1 and BV2')
 
@@ -229,11 +336,52 @@ def main():
     if cfg.mode.validation:
         print(f'Validation Dataset of {len(val_set)} instances')
         val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=cfg.mode.shuffle, num_workers=cfg.mode.num_threads)
+    
+    # Create holdout test/eval loaders if specified
+    holdout_test_loader = None
+    holdout_eval_loader = None
+    if args.sequence_holdout:
+        if args.holdout_test_seq:
+            if cfg.dataset.name == 'batvisionv1':
+                # Create dataset with ONLY the test sequence
+                holdout_test_set = BatvisionV1Dataset(cfg, cfg.dataset.annotation_file_train, location_blacklist=None)
+                # Filter to only include the holdout_test_seq
+                holdout_test_set.instances = holdout_test_set.instances[
+                    holdout_test_set.instances['audio path'].str.contains(args.holdout_test_seq)
+                ]
+            else:
+                holdout_test_set = BatvisionV2Dataset(cfg, cfg.dataset.annotation_file_train, location_blacklist=None, use_image=args.eval_img)
+                holdout_test_set.instances = holdout_test_set.instances[
+                    holdout_test_set.instances['audio path'].str.contains(args.holdout_test_seq)
+                ]
+            print(f'Holdout Test Set ({args.holdout_test_seq}): {len(holdout_test_set)} instances')
+            holdout_test_loader = DataLoader(holdout_test_set, batch_size=batch_size, shuffle=False, num_workers=cfg.mode.num_threads)
+        
+        if args.holdout_eval_seq:
+            if cfg.dataset.name == 'batvisionv1':
+                holdout_eval_set = BatvisionV1Dataset(cfg, cfg.dataset.annotation_file_train, location_blacklist=None)
+                holdout_eval_set.instances = holdout_eval_set.instances[
+                    holdout_eval_set.instances['audio path'].str.contains(args.holdout_eval_seq)
+                ]
+            else:
+                holdout_eval_set = BatvisionV2Dataset(cfg, cfg.dataset.annotation_file_train, location_blacklist=None, use_image=args.eval_img)
+                holdout_eval_set.instances = holdout_eval_set.instances[
+                    holdout_eval_set.instances['audio path'].str.contains(args.holdout_eval_seq)
+                ]
+            print(f'Holdout Eval Set ({args.holdout_eval_seq}): {len(holdout_eval_set)} instances')
+            holdout_eval_loader = DataLoader(holdout_eval_set, batch_size=batch_size, shuffle=False, num_workers=cfg.mode.num_threads)
 
     # ---------- Load Model ----------
-    model = define_G(cfg, input_nc = 2, output_nc = 1, ngf = 64, netG = cfg.model.generator, norm = 'batch',
-                                    use_dropout = False, init_type='normal', init_gain=0.02, gpu_ids = gpu_ids)
+    # Set input channels: 3 for RGB images, 2 for binaural audio
+    input_nc = 3 if args.eval_img else 2
+    if args.eval_img:
+        print("Using camera images (RGB, 3 channels) as input instead of audio")
+    
+    model = define_G(cfg, input_nc = input_nc, output_nc = 1, ngf = 64, netG = 'unet_256', norm = 'batch',
+                                    use_dropout = False, init_type='normal', init_gain=0.02, gpu_ids = gpu_ids) # cfg.model.generator
+
     print('Model used:', cfg.model.generator)
+    print(f'Input channels: {input_nc} ({"RGB image" if args.eval_img else "binaural audio"})')
     if len(gpu_ids) > 1:
         print(f'Using DataParallel on {len(gpu_ids)} GPUs: {gpu_ids}')
    
@@ -241,8 +389,14 @@ def main():
     max_depth = cfg.dataset.max_depth if cfg.dataset.max_depth else 30.0
     
     # Override config with command line arguments (for sweep)
+    # Smart criterion inference: if loss weights or use_silog are specified, auto-set to Combined
     if args.criterion is not None:
         cfg.mode.criterion = args.criterion
+    elif args.l1_weight is not None or args.silog_weight is not None or args.use_silog is not None:
+        # User specified loss configuration -> automatically use Combined
+        cfg.mode.criterion = 'Combined'
+        print(f"Auto-detecting Combined loss mode (loss configuration specified)")
+    
     if args.optimizer is not None:
         cfg.mode.optimizer = args.optimizer
     if args.silog_lambda is not None:
@@ -268,6 +422,7 @@ def main():
         silog_criterion = None
         l1_weight = 0.0
         silog_weight = 0.0
+        use_silog_loss = False
         print(f"Using loss function: L1")
     elif cfg.mode.criterion == 'SIlog':
         lambda_scale = getattr(cfg.mode, 'silog_lambda', 0.5)
@@ -276,16 +431,36 @@ def main():
         silog_criterion = None
         l1_weight = 0.0
         silog_weight = 0.0
+        use_silog_loss = True
         print(f"Using loss function: SIlog (lambda={lambda_scale})")
     elif cfg.mode.criterion == 'Combined':
-        # Simple combined loss: just use both loss functions with weights
+        # Combined loss: L1 + optional SIlog
         l1_weight = getattr(cfg.mode, 'l1_weight', 0.5)
         silog_weight = getattr(cfg.mode, 'silog_weight', 0.5)
         silog_lambda = getattr(cfg.mode, 'silog_lambda', 0.5)
-        l1_criterion = nn.L1Loss().to(device)
-        silog_criterion = SIlogLoss(lambda_scale=silog_lambda).to(device)
-        criterion = None  # Will compute manually
-        print(f"Using loss function: Combined (L1={l1_weight}, SIlog={silog_weight}, lambda={silog_lambda})")
+        
+        # Determine if SIlog should be used
+        # Priority: 1) explicit args.use_silog, 2) silog_weight=0, 3) default True
+        if args.use_silog is not None:
+            use_silog_loss = args.use_silog
+        elif silog_weight == 0.0:
+            use_silog_loss = False
+        else:
+            use_silog_loss = True  # Default for Combined mode
+        
+        # Setup criterion based on use_silog_loss
+        if not use_silog_loss:
+            silog_weight = 0.0
+            l1_weight = 1.0  # Use only L1
+            l1_criterion = nn.L1Loss().to(device)
+            silog_criterion = None
+            criterion = None
+            print(f"Using loss function: L1 only (SIlog disabled)")
+        else:
+            l1_criterion = nn.L1Loss().to(device)
+            silog_criterion = SIlogLoss(lambda_scale=silog_lambda).to(device)
+            criterion = None  # Will compute manually
+            print(f"Using loss function: Combined (L1={l1_weight}, SIlog={silog_weight}, lambda={silog_lambda})")
     else:
         raise ValueError(f"Unknown criterion: {cfg.mode.criterion}. "
                         f"Available: L1, SIlog, Combined")
@@ -318,6 +493,8 @@ def main():
                 'depth_norm': cfg.dataset.depth_norm,
                 'images_size': cfg.dataset.images_size,
                 'audio_format': cfg.dataset.audio_format,
+                'use_image_input': args.eval_img,
+                'input_channels': 3 if args.eval_img else 2,
                 'epochs': cfg.mode.epochs,
                 'num_threads': cfg.mode.num_threads,
                 'shuffle': cfg.mode.shuffle,
@@ -326,6 +503,10 @@ def main():
                 'num_gpus': len(gpu_ids),
                 'gpu_ids': gpu_ids,
                 'device': str(device),
+                # Loss config
+                'l1_weight': l1_weight,
+                'silog_weight': silog_weight,
+                'use_silog': use_silog_loss,
             })
             wandb.run.tags = [cfg.dataset.name, cfg.model.generator, cfg.mode.criterion, cfg.mode.optimizer]
             print(f"W&B sweep run updated: {experiment_name}")
@@ -344,6 +525,8 @@ def main():
                     'depth_norm': cfg.dataset.depth_norm,
                     'images_size': cfg.dataset.images_size,
                     'audio_format': cfg.dataset.audio_format,
+                    'use_image_input': args.eval_img,
+                    'input_channels': 3 if args.eval_img else 2,
                     
                     # Training config
                     'batch_size': cfg.mode.batch_size,
@@ -356,12 +539,22 @@ def main():
                     
                     # Loss config
                     'silog_lambda': getattr(cfg.mode, 'silog_lambda', 0.5) if cfg.mode.criterion in ['SIlog', 'Combined'] else None,
-                    'l1_weight': getattr(cfg.mode, 'l1_weight', None) if cfg.mode.criterion == 'Combined' else None,
-                    'silog_weight': getattr(cfg.mode, 'silog_weight', None) if cfg.mode.criterion == 'Combined' else None,
+                    'l1_weight': l1_weight if cfg.mode.criterion == 'Combined' else None,
+                    'silog_weight': silog_weight if cfg.mode.criterion == 'Combined' else None,
+                    'use_silog': use_silog_loss,
                     
                     # Validation config
                     'validation': cfg.mode.validation,
                     'validation_iter': cfg.mode.validation_iter if cfg.mode.validation else None,
+                    
+                    # Holdout config
+                    'sequence_holdout': args.sequence_holdout,
+                    'holdout_test_seq': args.holdout_test_seq if args.sequence_holdout else None,
+                    'holdout_eval_seq': args.holdout_eval_seq if args.sequence_holdout else None,
+                    
+                    # Best model tracking
+                    'save_best_model': args.save_best_model,
+                    'best_metric': args.best_metric if args.save_best_model else None,
                     
                     # System config
                     'num_gpus': len(gpu_ids),
@@ -387,7 +580,10 @@ def main():
     file.write("Image processing: {}\n".format(cfg.dataset.preprocess))
     file.write("Image resize: {}\n".format(cfg.dataset.images_size))
     file.write("Depth norm: {}\n".format(cfg.dataset.depth_norm))
-    file.write("Audio type used for training: {}\n".format(cfg.dataset.audio_format))
+    if args.eval_img:
+        file.write("Input type: Camera RGB images (3 channels)\n")
+    else:
+        file.write("Audio type used for training: {}\n".format(cfg.dataset.audio_format))
     
     # parameters
     file.write("Learning rate: {}\n".format(cfg.mode.learning_rate))
@@ -413,6 +609,19 @@ def main():
     for param_group in optimizer.param_groups:
         print("Learning rate used: {}".format(param_group['lr']))
 
+    # ------- Best model tracking -----------
+    best_metric_value = float('inf')  # For metrics where lower is better
+    best_epoch = 0
+    if args.save_best_model:
+        if not args.use_wandb:
+            print("Warning: --save_best_model requires --use_wandb. Disabling best model saving.")
+            args.save_best_model = False
+        else:
+            print(f"Best model tracking enabled using metric: {args.best_metric}")
+            # For delta1, higher is better, so we track max instead
+            if args.best_metric == 'delta1':
+                best_metric_value = 0.0
+
     train_iter = 0
     for epoch in range(checkpoint_epoch, nb_epochs + 1):
 
@@ -437,7 +646,7 @@ def main():
             
             # compute loss
             # Use > 0 to include all valid pixels (0.1m threshold was too restrictive)
-            valid_mask = gtdepth > 0  # Include all valid pixels
+            valid_mask = gtdepth != 0.0  # Include all valid pixels
             
             # PROBLEM 3 FIX: Calculate loss in denormalized space (actual meters)
             if cfg.dataset.depth_norm:
@@ -447,16 +656,18 @@ def main():
                 depth_pred_denorm = depth_pred[valid_mask] * cfg.dataset.max_depth
                 gtdepth_denorm = gtdepth[valid_mask] * cfg.dataset.max_depth
                 
-                # Simple combined loss: just add weighted losses
+                # Compute loss based on criterion
                 if cfg.mode.criterion == 'Combined':
-                    loss = l1_weight * l1_criterion(depth_pred_denorm, gtdepth_denorm) + \
-                           silog_weight * silog_criterion(depth_pred_denorm, gtdepth_denorm)
+                    loss = l1_weight * l1_criterion(depth_pred_denorm, gtdepth_denorm)
+                    if use_silog_loss:
+                        loss += silog_weight * silog_criterion(depth_pred_denorm, gtdepth_denorm)
                 else:
                     loss = criterion(depth_pred_denorm, gtdepth_denorm)
             else:
                 if cfg.mode.criterion == 'Combined':
-                    loss = l1_weight * l1_criterion(depth_pred[valid_mask], gtdepth[valid_mask]) + \
-                           silog_weight * silog_criterion(depth_pred[valid_mask], gtdepth[valid_mask])
+                    loss = l1_weight * l1_criterion(depth_pred[valid_mask], gtdepth[valid_mask])
+                    if use_silog_loss:
+                        loss += silog_weight * silog_criterion(depth_pred[valid_mask], gtdepth[valid_mask])
                 else:
                     loss = criterion(depth_pred[valid_mask], gtdepth[valid_mask])
             
@@ -545,16 +756,18 @@ def main():
                         depth_pred_val_denorm = depth_pred_val[valid_mask_val] * cfg.dataset.max_depth
                         gtdepth_val_denorm = gtdepth_val[valid_mask_val] * cfg.dataset.max_depth
                         
-                        # Compute loss (simple combined if needed)
+                        # Compute loss (same as training)
                         if cfg.mode.criterion == 'Combined':
-                            loss_val = l1_weight * l1_criterion(depth_pred_val_denorm, gtdepth_val_denorm) + \
-                                      silog_weight * silog_criterion(depth_pred_val_denorm, gtdepth_val_denorm)
+                            loss_val = l1_weight * l1_criterion(depth_pred_val_denorm, gtdepth_val_denorm)
+                            if use_silog_loss:
+                                loss_val += silog_weight * silog_criterion(depth_pred_val_denorm, gtdepth_val_denorm)
                         else:
                             loss_val = criterion(depth_pred_val_denorm, gtdepth_val_denorm)
                     else:
                         if cfg.mode.criterion == 'Combined':
-                            loss_val = l1_weight * l1_criterion(depth_pred_val[valid_mask_val], gtdepth_val[valid_mask_val]) + \
-                                      silog_weight * silog_criterion(depth_pred_val[valid_mask_val], gtdepth_val[valid_mask_val])
+                            loss_val = l1_weight * l1_criterion(depth_pred_val[valid_mask_val], gtdepth_val[valid_mask_val])
+                            if use_silog_loss:
+                                loss_val += silog_weight * silog_criterion(depth_pred_val[valid_mask_val], gtdepth_val[valid_mask_val])
                         else:
                             loss_val = criterion(depth_pred_val[valid_mask_val], gtdepth_val[valid_mask_val])
                     batch_loss_val.append(loss_val.item()) 
@@ -659,6 +872,134 @@ def main():
                     # Log image to wandb
                     if WANDB_AVAILABLE and args.use_wandb:
                         log_dict['val/visualization'] = wandb.Image(vis_path, caption=f'Epoch {epoch}')
+                
+                # Check if this is the best model
+                if args.save_best_model:
+                    current_metric = {
+                        'rmse': rmse,
+                        'abs_rel': abs_rel,
+                        'delta1': delta1,
+                        'mae': mae,
+                        'loss': val_loss
+                    }[args.best_metric]
+                    
+                    is_best = False
+                    if args.best_metric == 'delta1':
+                        # Higher is better for delta1
+                        if current_metric > best_metric_value:
+                            is_best = True
+                            best_metric_value = current_metric
+                            best_epoch = epoch
+                    else:
+                        # Lower is better for other metrics
+                        if current_metric < best_metric_value:
+                            is_best = True
+                            best_metric_value = current_metric
+                            best_epoch = epoch
+                    
+                    if is_best:
+                        print(f"🎯 New best model! {args.best_metric}={best_metric_value:.4f} at epoch {epoch}")
+                        # Save best model
+                        best_model_path = './checkpoints/' + experiment_name + '/best_model.pth'
+                        os.makedirs('./checkpoints/' + experiment_name, exist_ok=True)
+                        torch.save({
+                            'epoch': epoch,
+                            'state_dict': model.state_dict(),
+                            'optimizer': optimizer.state_dict(),
+                            'best_metric': args.best_metric,
+                            'best_metric_value': best_metric_value,
+                        }, best_model_path)
+                        print(f"Best model saved to: {best_model_path}")
+                        
+                        if WANDB_AVAILABLE and args.use_wandb:
+                            log_dict['best_model_epoch'] = epoch
+                            log_dict[f'best_{args.best_metric}'] = best_metric_value
+                
+                # Evaluate on holdout sequences if available
+                if args.sequence_holdout and (holdout_test_loader or holdout_eval_loader):
+                    model.eval()
+                    
+                    # Evaluate holdout test set
+                    if holdout_test_loader:
+                        print(f"\nEvaluating on holdout test sequence: {args.holdout_test_seq}")
+                        holdout_test_errors = []
+                        with torch.no_grad():
+                            for audio_ho, gtdepth_ho in holdout_test_loader:
+                                audio_ho = audio_ho.to(device)
+                                gtdepth_ho = gtdepth_ho.to(device)
+                                depth_pred_ho = model(audio_ho)
+                                
+                                for idx in range(depth_pred_ho.shape[0]):
+                                    gt_map = gtdepth_ho[idx].cpu().numpy()
+                                    pred_map = depth_pred_ho[idx].cpu().numpy()
+                                    
+                                    if gt_map.ndim == 3:
+                                        gt_map = gt_map[0]
+                                    if pred_map.ndim == 3:
+                                        pred_map = pred_map[0]
+                                    
+                                    if cfg.dataset.depth_norm:
+                                        gt_map = gt_map * cfg.dataset.max_depth
+                                        pred_map = pred_map * cfg.dataset.max_depth
+                                    
+                                    epsilon = 1e-3 if cfg.dataset.depth_norm else 1e-6
+                                    pred_map = np.clip(pred_map, epsilon, cfg.dataset.max_depth)
+                                    gt_map = np.maximum(gt_map, 0.0)
+                                    
+                                    error_metrics = compute_errors(gt_map, pred_map, min_depth_threshold=0.0)
+                                    holdout_test_errors.append(error_metrics)
+                        
+                        ho_test_mean_errors = np.array(holdout_test_errors).mean(0)
+                        ho_test_abs_rel, ho_test_rmse, ho_test_delta1 = ho_test_mean_errors[0], ho_test_mean_errors[1], ho_test_mean_errors[2]
+                        print(f"Holdout Test - RMSE: {ho_test_rmse:.3f}, ABS_REL: {ho_test_abs_rel:.3f}, Delta1: {ho_test_delta1:.3f}")
+                        
+                        if WANDB_AVAILABLE and args.use_wandb:
+                            log_dict.update({
+                                'holdout_test/abs_rel': ho_test_abs_rel,
+                                'holdout_test/rmse': ho_test_rmse,
+                                'holdout_test/delta1': ho_test_delta1,
+                            })
+                    
+                    # Evaluate holdout eval set
+                    if holdout_eval_loader:
+                        print(f"Evaluating on holdout eval sequence: {args.holdout_eval_seq}")
+                        holdout_eval_errors = []
+                        with torch.no_grad():
+                            for audio_ho, gtdepth_ho in holdout_eval_loader:
+                                audio_ho = audio_ho.to(device)
+                                gtdepth_ho = gtdepth_ho.to(device)
+                                depth_pred_ho = model(audio_ho)
+                                
+                                for idx in range(depth_pred_ho.shape[0]):
+                                    gt_map = gtdepth_ho[idx].cpu().numpy()
+                                    pred_map = depth_pred_ho[idx].cpu().numpy()
+                                    
+                                    if gt_map.ndim == 3:
+                                        gt_map = gt_map[0]
+                                    if pred_map.ndim == 3:
+                                        pred_map = pred_map[0]
+                                    
+                                    if cfg.dataset.depth_norm:
+                                        gt_map = gt_map * cfg.dataset.max_depth
+                                        pred_map = pred_map * cfg.dataset.max_depth
+                                    
+                                    epsilon = 1e-3 if cfg.dataset.depth_norm else 1e-6
+                                    pred_map = np.clip(pred_map, epsilon, cfg.dataset.max_depth)
+                                    gt_map = np.maximum(gt_map, 0.0)
+                                    
+                                    error_metrics = compute_errors(gt_map, pred_map, min_depth_threshold=0.0)
+                                    holdout_eval_errors.append(error_metrics)
+                        
+                        ho_eval_mean_errors = np.array(holdout_eval_errors).mean(0)
+                        ho_eval_abs_rel, ho_eval_rmse, ho_eval_delta1 = ho_eval_mean_errors[0], ho_eval_mean_errors[1], ho_eval_mean_errors[2]
+                        print(f"Holdout Eval - RMSE: {ho_eval_rmse:.3f}, ABS_REL: {ho_eval_abs_rel:.3f}, Delta1: {ho_eval_delta1:.3f}")
+                        
+                        if WANDB_AVAILABLE and args.use_wandb:
+                            log_dict.update({
+                                'holdout_eval/abs_rel': ho_eval_abs_rel,
+                                'holdout_eval/rmse': ho_eval_rmse,
+                                'holdout_eval/delta1': ho_eval_delta1,
+                            })
                 
                 # Log all validation metrics to wandb
                 if WANDB_AVAILABLE and args.use_wandb and log_dict:

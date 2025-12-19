@@ -12,12 +12,23 @@ from .utils_dataset import get_transform
 
 class BatvisionV1Dataset(Dataset):
     
-    def __init__(self, cfg, annotation_file):
+    def __init__(self, cfg, annotation_file, location_blacklist=None):
         
         self.cfg = cfg
         self.root_dir = cfg.dataset.dataset_dir
         self.audio_format = cfg.dataset.audio_format
+        
+        # Load instances
         self.instances = pd.read_csv(os.path.join(self.root_dir, annotation_file))
+        
+        # Apply location blacklist if provided
+        if location_blacklist:
+            original_len = len(self.instances)
+            # Filter out instances from blacklisted locations
+            for location in location_blacklist:
+                self.instances = self.instances[~self.instances['audio path left'].str.contains(location)]
+            filtered_len = len(self.instances)
+            print(f"BatvisionV1: Filtered {original_len - filtered_len} instances from blacklisted locations: {location_blacklist}")
             
     def __len__(self):
         return len(self.instances)
