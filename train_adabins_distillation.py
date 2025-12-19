@@ -495,8 +495,8 @@ Examples:
                         gtdepth = gtdepth.to(device)
                         rgb = None
                     
-                    # Forward (inference mode - audio only)
-                    output = model(audio, rgb=None, mode='inference')
+                    # Forward (use RGB for visualization, but audio prediction is independent)
+                    output = model(audio, rgb=rgb, mode='inference')
                     
                     # Compute metrics
                     pred_depth = output['audio']['final_depth']
@@ -523,12 +523,14 @@ Examples:
                     # Visualize first batch
                     if batch_idx == 0:
                         save_path = os.path.join(results_dir, f'epoch_{epoch:04d}_distill.png')
+                        rgb_pred = output['rgb']['final_depth'] if output['rgb'] is not None else None
+                        rgb_bins = output['rgb']['bin_centers'] if output['rgb'] is not None else None
                         visualize_distillation_batch(
                             audio, rgb, gtdepth,
                             output['audio']['final_depth'],
-                            None,  # No RGB pred at inference
+                            rgb_pred,  # Show RGB teacher prediction
                             output['audio']['bin_centers'],
-                            None,
+                            rgb_bins,  # Show RGB bin centers
                             save_path
                         )
             
