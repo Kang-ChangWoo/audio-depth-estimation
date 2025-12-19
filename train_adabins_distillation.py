@@ -522,17 +522,21 @@ Examples:
                         )
             
             # Average metrics
-            avg_val_metrics = {}
-            for key in val_metrics[0].keys():
-                avg_val_metrics[key] = np.mean([m[key] for m in val_metrics])
-            
-            print(f"  Validation:")
-            print(f"    RMSE:    {avg_val_metrics['rmse']:.4f}")
-            print(f"    ABS_REL: {avg_val_metrics['abs_rel']:.4f}")
-            print(f"    DELTA1:  {avg_val_metrics['delta1']:.4f}")
+            if len(val_metrics) > 0:
+                avg_val_metrics = {}
+                for key in val_metrics[0].keys():
+                    avg_val_metrics[key] = np.mean([m[key] for m in val_metrics])
+                
+                print(f"  Validation:")
+                print(f"    RMSE:    {avg_val_metrics['rmse']:.4f}")
+                print(f"    ABS_REL: {avg_val_metrics['abs_rel']:.4f}")
+                print(f"    DELTA1:  {avg_val_metrics['delta1']:.4f}")
+            else:
+                print(f"  Validation: No valid samples (skipping metrics)")
+                avg_val_metrics = {'rmse': float('inf'), 'abs_rel': float('inf'), 'delta1': 0.0}
             
             # Save best model
-            if avg_val_metrics['rmse'] < best_rmse:
+            if avg_val_metrics['rmse'] < best_rmse and avg_val_metrics['rmse'] != float('inf'):
                 best_rmse = avg_val_metrics['rmse']
                 torch.save({
                     'epoch': epoch,
@@ -551,11 +555,15 @@ Examples:
                     'train/response': avg_metrics['response'],
                     'train/feature': avg_metrics['feature'],
                     'train/sparse': avg_metrics['sparse'],
-                    'val/rmse': avg_val_metrics['rmse'],
-                    'val/abs_rel': avg_val_metrics['abs_rel'],
-                    'val/delta1': avg_val_metrics['delta1'],
                     'lr': optimizer.param_groups[0]['lr'],
                 }
+                # Only log validation metrics if available
+                if len(val_metrics) > 0:
+                    log_dict.update({
+                        'val/rmse': avg_val_metrics['rmse'],
+                        'val/abs_rel': avg_val_metrics['abs_rel'],
+                        'val/delta1': avg_val_metrics['delta1'],
+                    })
                 wandb.log(log_dict)
         
         # Save checkpoint
