@@ -261,21 +261,46 @@ Examples:
     # ==========================================
     print("\nLoading datasets...")
     if cfg.dataset.name == 'batvisionv2':
-        train_dataset = BatvisionV2Dataset(
+        # Load audio dataset
+        train_dataset_audio = BatvisionV2Dataset(
             cfg, 'train.csv',
-            use_image=True  # IMPORTANT: Need RGB for distillation!
+            use_image=False  # Audio
         )
-        val_dataset = BatvisionV2Dataset(
+        val_dataset_audio = BatvisionV2Dataset(
+            cfg, 'val.csv',
+            use_image=False
+        )
+        # Load RGB dataset
+        train_dataset_rgb = BatvisionV2Dataset(
+            cfg, 'train.csv',
+            use_image=True  # RGB
+        )
+        val_dataset_rgb = BatvisionV2Dataset(
             cfg, 'val.csv',
             use_image=True
         )
+        # Create paired dataset
+        from torch.utils.data import Dataset as TorchDataset
+        class PairedDataset(TorchDataset):
+            def __init__(self, audio_dataset, rgb_dataset):
+                self.audio_dataset = audio_dataset
+                self.rgb_dataset = rgb_dataset
+                assert len(audio_dataset) == len(rgb_dataset)
+            
+            def __len__(self):
+                return len(self.audio_dataset)
+            
+            def __getitem__(self, idx):
+                audio, depth = self.audio_dataset[idx]
+                rgb, _ = self.rgb_dataset[idx]
+                return audio, rgb, depth
+        
+        train_dataset = PairedDataset(train_dataset_audio, train_dataset_rgb)
+        val_dataset = PairedDataset(val_dataset_audio, val_dataset_rgb)
     elif cfg.dataset.name == 'batvisionv1':
-        train_dataset = BatvisionV1Dataset(
-            cfg, 'train.csv'
-        )
-        val_dataset = BatvisionV1Dataset(
-            cfg, 'val.csv'
-        )
+        # BV1 doesn't have RGB, so only audio
+        train_dataset = BatvisionV1Dataset(cfg, 'train.csv')
+        val_dataset = BatvisionV1Dataset(cfg, 'val.csv')
     else:
         raise ValueError(f"Unknown dataset: {cfg.dataset.name}")
     
@@ -405,9 +430,17 @@ Examples:
         epoch_metrics = {'task': [], 'response': [], 'feature': [], 'bin': [], 'sparse': []}
         
         for batch_idx, batch in enumerate(train_loader):
-            audio = batch['audio'].to(device)
-            rgb = batch['image'].to(device) if 'image' in batch else None
-            gtdepth = batch['depth'].to(device)
+            # Unpack batch (depends on dataset)
+            if cfg.dataset.name == 'batvisionv2':
+                audio, rgb, gtdepth = batch
+                audio = audio.to(device)
+                rgb = rgb.to(device)
+                gtdepth = gtdepth.to(device)
+            else:  # batvisionv1 - audio only
+                audio, gtdepth = batch
+                audio = audio.to(device)
+                gtdepth = gtdepth.to(device)
+                rgb = None
             
             # Forward pass
             output = model(audio, rgb=rgb, mode='train')
@@ -450,9 +483,17 @@ Examples:
             
             with torch.no_grad():
                 for batch_idx, batch in enumerate(val_loader):
-                    audio = batch['audio'].to(device)
-                    rgb = batch['image'].to(device) if 'image' in batch else None
-                    gtdepth = batch['depth'].to(device)
+                    # Unpack batch (depends on dataset)
+                    if cfg.dataset.name == 'batvisionv2':
+                        audio, rgb, gtdepth = batch
+                        audio = audio.to(device)
+                        rgb = rgb.to(device)
+                        gtdepth = gtdepth.to(device)
+                    else:  # batvisionv1 - audio only
+                        audio, gtdepth = batch
+                        audio = audio.to(device)
+                        gtdepth = gtdepth.to(device)
+                        rgb = None
                     
                     # Forward (inference mode - audio only)
                     output = model(audio, rgb=None, mode='inference')
