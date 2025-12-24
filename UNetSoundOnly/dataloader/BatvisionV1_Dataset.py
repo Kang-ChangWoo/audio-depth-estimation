@@ -12,12 +12,23 @@ from .utils_dataset import get_transform
 
 class BatvisionV1Dataset(Dataset):
     
-    def __init__(self, cfg, annotation_file):
+    def __init__(self, cfg, annotation_file, location_blacklist=None):
         
         self.cfg = cfg
         self.root_dir = cfg.dataset.dataset_dir
         self.audio_format = cfg.dataset.audio_format
+        
+        # Load instances
         self.instances = pd.read_csv(os.path.join(self.root_dir, annotation_file))
+        
+        # Apply location blacklist if provided
+        if location_blacklist:
+            original_len = len(self.instances)
+            # Filter out instances from blacklisted locations
+            for location in location_blacklist:
+                self.instances = self.instances[~self.instances['audio path left'].str.contains(location)]
+            filtered_len = len(self.instances)
+            print(f"BatvisionV1: Filtered {original_len - filtered_len} instances from blacklisted locations: {location_blacklist}")
             
     def __len__(self):
         return len(self.instances)
@@ -33,7 +44,7 @@ class BatvisionV1Dataset(Dataset):
         
         ## Depth
         # Load depth map
-        depth = np.load(depth_path)
+        depth = np.load(depth_path).astype(np.float32)
 
         # Set nan value to 0
         depth = np.nan_to_num(depth)
@@ -44,9 +55,15 @@ class BatvisionV1Dataset(Dataset):
         depth[depth > self.cfg.dataset.max_depth] = self.cfg.dataset.max_depth 
         depth[depth < 0.0] = 0.0
         
-        # Transform 
-        depth_transform = get_transform(self.cfg, convert =  True, depth_norm = self.cfg.dataset.depth_norm)
-        gt_depth = depth_transform(depth)
+        # Resize with INTER_NEAREST (like V2)
+        depth = cv2.resize(depth, (self.cfg.dataset.images_size, self.cfg.dataset.images_size), 
+                           interpolation=cv2.INTER_NEAREST)
+        
+        # Normalize if needed
+        if self.cfg.dataset.depth_norm:
+            depth = depth / self.cfg.dataset.max_depth
+        
+        gt_depth = torch.from_numpy(depth).unsqueeze(0)
         
         ## Audio
         # Load audio binaural waveform

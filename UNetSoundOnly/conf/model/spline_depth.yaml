@@ -1,0 +1,26 @@
+# SplineGS-inspired Depth Model Configuration
+# Uses low-rank x,y spline decomposition for depth prediction
+
+name: spline_depth
+generator: spline_depth
+
+# Spline parameters
+latent_dim: 512        # Latent representation dimension
+rank: 8                # Number of ranks in low-rank decomposition (R in D = Σ u_r(x)*v_r(y))
+ctrl_x: 8              # Number of control points in x direction
+ctrl_y: 8              # Number of control points in y direction
+
+# Encoder type: 'standard' or 'unet'
+encoder_type: standard
+
+# Multi-scale spline (coarse + fine)
+multi_scale: false
+
+# Depth output activation: 'none', 'sigmoid', 'softplus'
+depth_activation: none
+
+# Regularization weights
+smooth_weight: 0.01    # Spline smoothness regularization
+sparsity_weight: 0.001 # Control point sparsity regularization
+
+
