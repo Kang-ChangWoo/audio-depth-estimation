@@ -472,6 +472,7 @@ Examples:
         print(f"    Task:     {avg_metrics['task']:.4f}")
         print(f"    Response: {avg_metrics['response']:.4f}")
         print(f"    Feature:  {avg_metrics['feature']:.4f}")
+        print(f"    Bin:      {avg_metrics['bin']:.4f}")
         print(f"    Sparse:   {avg_metrics['sparse']:.4f}")
         
         # ==========================================

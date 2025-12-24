@@ -19,6 +19,7 @@ import pickle
 import torch
 from torch.utils.data import DataLoader
 import argparse
+from tqdm import tqdm
 
 from config_loader import load_config
 import wandb
@@ -113,8 +114,8 @@ Examples:
                           help='Validation frequency in epochs (overrides config)')
     group_val.add_argument('--use_wandb', action='store_true', default=False,
                           help='Enable Weights & Biases logging')
-    group_val.add_argument('--save_best_model', action='store_true', default=False,
-                          help='Save best model based on validation RMSE (requires --use_wandb)')
+    group_val.add_argument('--save_best_model', action='store_true', default=True,
+                          help='Save best model based on validation metric (default: True)')
     group_val.add_argument('--best_metric', type=str, default='rmse',
                           choices=['rmse', 'abs_rel', 'delta1', 'mae', 'loss'],
                           help='Metric to use for best model selection (default: rmse, lower is better for all except delta1)')
@@ -613,14 +614,10 @@ Examples:
     best_metric_value = float('inf')  # For metrics where lower is better
     best_epoch = 0
     if args.save_best_model:
-        if not args.use_wandb:
-            print("Warning: --save_best_model requires --use_wandb. Disabling best model saving.")
-            args.save_best_model = False
-        else:
-            print(f"Best model tracking enabled using metric: {args.best_metric}")
-            # For delta1, higher is better, so we track max instead
-            if args.best_metric == 'delta1':
-                best_metric_value = 0.0
+        print(f"Best model tracking enabled using metric: {args.best_metric}")
+        # For delta1, higher is better, so we track max instead
+        if args.best_metric == 'delta1':
+            best_metric_value = 0.0
 
     train_iter = 0
     for epoch in range(checkpoint_epoch, nb_epochs + 1):
@@ -633,7 +630,7 @@ Examples:
         # ------ Training ---------
         model.train()  
 
-        for i,(audio, gtdepth) in enumerate(train_loader):
+        for i,(audio, gtdepth) in enumerate(tqdm(train_loader, desc=f'Epoch {epoch}/{nb_epochs} [Train]', leave=False)):
 
             audio = audio.to(device)
             gtdepth = gtdepth.to(device)   
@@ -732,7 +729,7 @@ Examples:
             val_preds = []
             val_gts = []
             with torch.no_grad():
-                for batch_idx, (audio_val, gtdepth_val) in enumerate(val_loader):
+                for batch_idx, (audio_val, gtdepth_val) in enumerate(tqdm(val_loader, desc=f'Epoch {epoch}/{nb_epochs} [Val]', leave=False)):
                     audio_val = audio_val.to(device)
                     gtdepth_val = gtdepth_val.to(device)        
                     
@@ -924,7 +921,7 @@ Examples:
                         print(f"\nEvaluating on holdout test sequence: {args.holdout_test_seq}")
                         holdout_test_errors = []
                         with torch.no_grad():
-                            for audio_ho, gtdepth_ho in holdout_test_loader:
+                            for audio_ho, gtdepth_ho in tqdm(holdout_test_loader, desc=f'Holdout Test [{args.holdout_test_seq}]', leave=False):
                                 audio_ho = audio_ho.to(device)
                                 gtdepth_ho = gtdepth_ho.to(device)
                                 depth_pred_ho = model(audio_ho)
@@ -965,7 +962,7 @@ Examples:
                         print(f"Evaluating on holdout eval sequence: {args.holdout_eval_seq}")
                         holdout_eval_errors = []
                         with torch.no_grad():
-                            for audio_ho, gtdepth_ho in holdout_eval_loader:
+                            for audio_ho, gtdepth_ho in tqdm(holdout_eval_loader, desc=f'Holdout Eval [{args.holdout_eval_seq}]', leave=False):
                                 audio_ho = audio_ho.to(device)
                                 gtdepth_ho = gtdepth_ho.to(device)
                                 depth_pred_ho = model(audio_ho)

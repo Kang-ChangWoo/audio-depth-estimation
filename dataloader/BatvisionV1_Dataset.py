@@ -44,7 +44,7 @@ class BatvisionV1Dataset(Dataset):
         
         ## Depth
         # Load depth map
-        depth = np.load(depth_path)
+        depth = np.load(depth_path).astype(np.float32)
 
         # Set nan value to 0
         depth = np.nan_to_num(depth)
@@ -55,9 +55,15 @@ class BatvisionV1Dataset(Dataset):
         depth[depth > self.cfg.dataset.max_depth] = self.cfg.dataset.max_depth 
         depth[depth < 0.0] = 0.0
         
-        # Transform 
-        depth_transform = get_transform(self.cfg, convert =  True, depth_norm = self.cfg.dataset.depth_norm)
-        gt_depth = depth_transform(depth)
+        # Resize with INTER_NEAREST (like V2)
+        depth = cv2.resize(depth, (self.cfg.dataset.images_size, self.cfg.dataset.images_size), 
+                           interpolation=cv2.INTER_NEAREST)
+        
+        # Normalize if needed
+        if self.cfg.dataset.depth_norm:
+            depth = depth / self.cfg.dataset.max_depth
+        
+        gt_depth = torch.from_numpy(depth).unsqueeze(0)
         
         ## Audio
         # Load audio binaural waveform

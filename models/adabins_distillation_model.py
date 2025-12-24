@@ -197,7 +197,7 @@ class AdaBinsDecoder(nn.Module):
         
         if logits.shape[-1] != self.output_size:
             logits = F.interpolate(logits, size=(self.output_size, self.output_size),
-                                  mode='bilinear', align_corners=False)
+                                  mode='nearest')  # NEAREST for depth-related logits
         
         # Soft binning: depth = Σ(prob_i * bin_center_i)
         probs = F.softmax(logits, dim=1)
@@ -334,8 +334,8 @@ class AdaBinsDistillationModel(nn.Module):
         residual_raw = self.residual_head(x)
         if residual_raw.shape[-1] != self.output_size:
             residual_raw = F.interpolate(residual_raw, size=(self.output_size, self.output_size),
-                                        mode='bilinear', align_corners=False)
-        rgb_residual = torch.tanh(residual_raw) * (self.max_depth * 0.2)
+                                        mode='nearest')  # NEAREST for depth values!
+        rgb_residual = torch.tanh(residual_raw) * (self.max_depth * 0.05)  # Reduced: 0.2→0.05
         
         rgb_final_depth = torch.clamp(rgb_base_depth + rgb_residual, 0, self.max_depth)
         
@@ -383,8 +383,8 @@ class AdaBinsDistillationModel(nn.Module):
         residual_raw = self.residual_head(x)
         if residual_raw.shape[-1] != self.output_size:
             residual_raw = F.interpolate(residual_raw, size=(self.output_size, self.output_size),
-                                        mode='bilinear', align_corners=False)
-        audio_residual = torch.tanh(residual_raw) * (self.max_depth * 0.2)
+                                        mode='nearest')  # NEAREST for depth values!
+        audio_residual = torch.tanh(residual_raw) * (self.max_depth * 0.05)  # Reduced: 0.2→0.05
         
         audio_final_depth = torch.clamp(audio_base_depth + audio_residual, 0, self.max_depth)
         

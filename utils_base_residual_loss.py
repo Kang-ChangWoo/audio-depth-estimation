@@ -22,6 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from utils_loss import SIlogLoss
 
 
 class BaseResidualLoss(nn.Module):
@@ -34,6 +35,8 @@ class BaseResidualLoss(nn.Module):
         lambda_sparse: Weight for residual sparsity (keep residual small)
         lowpass_kernel: Kernel size for low-pass filtering GT (larger = coarser base)
         use_l1: Use L1 loss (True) or L2 loss (False)
+        use_silog: Use Scale-Invariant loss for reconstruction (default: False)
+        silog_lambda: Lambda parameter for SIlog loss (default: 0.5)
     """
     
     def __init__(self, 
@@ -41,7 +44,9 @@ class BaseResidualLoss(nn.Module):
                  lambda_base=1.2,
                  lambda_sparse=0.05,
                  lowpass_kernel=16,
-                 use_l1=True):
+                 use_l1=True,
+                 use_silog=False,
+                 silog_lambda=0.5):
         super().__init__()
         
         self.lambda_recon = lambda_recon
@@ -49,12 +54,18 @@ class BaseResidualLoss(nn.Module):
         self.lambda_sparse = lambda_sparse
         self.lowpass_kernel = lowpass_kernel
         self.use_l1 = use_l1
+        self.use_silog = use_silog
         
-        # Loss function
-        if use_l1:
-            self.loss_fn = F.l1_loss
+        # Loss function for reconstruction
+        if use_silog:
+            self.recon_loss_fn = SIlogLoss(lambda_scale=silog_lambda)
+        elif use_l1:
+            self.recon_loss_fn = F.l1_loss
         else:
-            self.loss_fn = F.mse_loss
+            self.recon_loss_fn = F.mse_loss
+        
+        # Loss function for base (always L1 for structural guidance)
+        self.base_loss_fn = F.l1_loss
     
     def forward(self, base_depth, residual, final_depth, gt_depth, valid_mask=None):
         """
@@ -114,10 +125,14 @@ class BaseResidualLoss(nn.Module):
         # 1. Reconstruction Loss
         # ==========================================
         # Final prediction should match GT exactly
-        loss_recon = self.loss_fn(final_depth_masked, gt_depth_masked)
+        if self.use_silog:
+            # SIlog loss expects full tensors (not masked)
+            loss_recon = self.recon_loss_fn(final_depth_masked, gt_depth_masked)
+        else:
+            loss_recon = self.recon_loss_fn(final_depth_masked, gt_depth_masked)
         
-        # Structural guidance loss
-        loss_base = self.loss_fn(base_depth_masked, gt_struct_masked)
+        # Structural guidance loss (always use L1 for base)
+        loss_base = self.base_loss_fn(base_depth_masked, gt_struct_masked)
         
         # ==========================================
         # 3. Sparsity Penalty
@@ -168,7 +183,9 @@ class AdaptiveBaseResidualLoss(nn.Module):
                  lambda_base_init=2.0,
                  lambda_sparse=0.05,
                  warmup_epochs=50,
-                 lowpass_kernel=16):
+                 lowpass_kernel=16,
+                 use_silog=False,
+                 silog_lambda=0.5):
         super().__init__()
         
         self.lambda_recon_init = lambda_recon_init
@@ -184,7 +201,9 @@ class AdaptiveBaseResidualLoss(nn.Module):
             lambda_recon=lambda_recon_init,
             lambda_base=lambda_base_init,
             lambda_sparse=lambda_sparse,
-            lowpass_kernel=lowpass_kernel
+            lowpass_kernel=lowpass_kernel,
+            use_silog=use_silog,
+            silog_lambda=silog_lambda
         )
     
     def set_epoch(self, epoch):

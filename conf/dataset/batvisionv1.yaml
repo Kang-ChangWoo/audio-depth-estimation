@@ -1,5 +1,5 @@
 name: batvisionv1
-dataset_dir: # path to BV1 data 
+dataset_dir: /root/dev/data/dataset/Batvision/BatvisionV1
 annotation_file_train: train.csv 
 annotation_file_val: val.csv
 annotation_file_test: test.csv

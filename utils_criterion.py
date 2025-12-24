@@ -1,5 +1,6 @@
 
-import numpy as np 
+import numpy as np
+import torch
 
 
 def compute_errors(gt, pred, min_depth_threshold=0.0):
@@ -12,6 +13,12 @@ def compute_errors(gt, pred, min_depth_threshold=0.0):
         min_depth_threshold: Minimum depth threshold to exclude near-depth pixels (default: 0.0)
                             Set to 0.0 to include all valid pixels, or 0.1 to match training threshold
     """
+    # Convert to numpy if torch tensors
+    if torch.is_tensor(gt):
+        gt = gt.detach().cpu().numpy()
+    if torch.is_tensor(pred):
+        pred = pred.detach().cpu().numpy()
+    
     # Use threshold to filter pixels (default: 0.0 to include all valid pixels)
     # mask = gt > min_depth_threshold
     mask = gt != 0.0

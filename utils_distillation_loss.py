@@ -31,10 +31,10 @@ class DistillationLoss(nn.Module):
     
     def __init__(
         self,
-        lambda_task=1.0,
-        lambda_response=0.5,
-        lambda_feature=0.3,
-        lambda_bin=0.2,
+        lambda_task=2.0,  # HIGH - need to learn from GT!
+        lambda_response=0.3,  # Lower - don't over-rely on teacher
+        lambda_feature=0.2,  # Lower - feature matching is secondary
+        lambda_bin=0.05,  # Much lower - KL loss is naturally large
         lambda_sparse=0.1,
         temperature=4.0
     ):
@@ -102,19 +102,27 @@ class DistillationLoss(nn.Module):
         Bin Distribution Distillation: Match teacher's bin predictions
         
         Uses KL divergence with temperature scaling for soft targets
+        
+        CRITICAL FIX: Spatial average first to avoid huge loss values
+        bin_logits: [B, n_bins, H, W] → [B, n_bins] before KL divergence
         """
         if temperature is None:
             temperature = self.temperature
         
+        # Spatial average to get per-image bin distribution
+        # [B, n_bins, H, W] → [B, n_bins]
+        audio_logits_avg = audio_logits.mean(dim=(2, 3))
+        rgb_logits_avg = rgb_logits.mean(dim=(2, 3))
+        
         # Apply temperature scaling
-        audio_soft = F.log_softmax(audio_logits / temperature, dim=1)
-        rgb_soft = F.softmax(rgb_logits.detach() / temperature, dim=1)
+        audio_soft = F.log_softmax(audio_logits_avg / temperature, dim=1)
+        rgb_soft = F.softmax(rgb_logits_avg.detach() / temperature, dim=1)
         
         # KL divergence
         kl_loss = F.kl_div(audio_soft, rgb_soft, reduction='batchmean')
         
-        # Scale back by temperature^2 (standard practice in distillation)
-        return kl_loss * (temperature ** 2)
+        # NO temperature^2 scaling - already huge without it!
+        return kl_loss
     
     def bin_centers_loss(self, audio_bins, rgb_bins):
         """
@@ -266,20 +274,26 @@ class AdaptiveDistillationLoss(nn.Module):
         """
         progress = min(1.0, self.current_epoch / self.max_epochs)
         
-        # Task loss: gradually increase importance
-        lambda_task = 0.5 + 0.5 * progress
+        # Task loss: HIGH from start (need to learn from GT!)
+        lambda_task = 2.0 + progress  # Start at 2.0, increase to 3.0
         
-        # Response distillation: gradually decrease
-        lambda_response = 1.0 - 0.7 * progress
-        
-        # Feature distillation: peak in middle, decrease later
-        if progress < 0.5:
-            lambda_feature = 0.5 + progress
+        # Response distillation: start LOW, gradually increase
+        # (early: RGB is random, don't follow it too much)
+        if progress < 0.1:
+            lambda_response = 0.1  # Very low for first 20 epochs
         else:
-            lambda_feature = 1.0 - (progress - 0.5)
+            lambda_response = 0.1 + 0.4 * (progress - 0.1) / 0.9  # Increase to 0.5
         
-        # Bin distillation: high early, decrease later
-        lambda_bin = 0.5 - 0.3 * progress
+        # Feature distillation: low initially, peak in middle
+        if progress < 0.2:
+            lambda_feature = 0.05  # Very low initially
+        elif progress < 0.5:
+            lambda_feature = 0.05 + 0.25 * (progress - 0.2) / 0.3  # Increase to 0.3
+        else:
+            lambda_feature = 0.3 - 0.1 * (progress - 0.5) / 0.5  # Decrease to 0.2
+        
+        # Bin distillation: MUCH lower weight (KL loss is naturally large)
+        lambda_bin = 0.05 - 0.03 * progress  # Start at 0.05, decrease to 0.02
         
         return {
             'task': lambda_task,
@@ -392,4 +406,5 @@ if __name__ == '__main__':
               f"feature={loss_dict['weights']['feature']:.2f}")
     
     print("\n✅ Loss test passed!")
+
 

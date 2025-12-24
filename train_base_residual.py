@@ -117,7 +117,7 @@ Examples:
     # Dataset
     parser.add_argument('--dataset', type=str, default='batvisionv2',
                        choices=['batvisionv1', 'batvisionv2'])
-    parser.add_argument('--audio_format', type=str, default=None,
+    parser.add_argument('--audio_format', type=str, default='mel_spectrogram',
                        choices=['spectrogram', 'mel_spectrogram', 'waveform'])
     
     # Model
@@ -129,6 +129,10 @@ Examples:
     # Loss
     parser.add_argument('--use_adaptive_loss', action='store_true', default=False,
                        help='Use adaptive loss weights (curriculum learning)')
+    parser.add_argument('--use_silog', action='store_true', default=True,
+                       help='Use Scale-Invariant loss for reconstruction (default: True)')
+    parser.add_argument('--silog_lambda', type=float, default=0.5,
+                       help='Lambda parameter for SIlog loss (default: 0.5)')
     parser.add_argument('--lambda_recon', type=float, default=1.0,
                        help='Weight for reconstruction loss')
     parser.add_argument('--lambda_base', type=float, default=1.2,
@@ -193,6 +197,7 @@ Examples:
     print(f"Optimizer: {cfg.mode.optimizer}")
     print(f"Epochs: {cfg.mode.epochs}")
     print(f"Loss Type: {'Adaptive' if args.use_adaptive_loss else 'Fixed'}")
+    print(f"Reconstruction Loss: {'SI-log (λ=' + str(args.silog_lambda) + ')' if args.use_silog else 'L1'}")
     print(f"Loss Weights: λ_recon={args.lambda_recon}, λ_base={args.lambda_base}, λ_sparse={args.lambda_sparse}")
     print("="*60 + "\n")
     
@@ -251,23 +256,28 @@ Examples:
     
     # Create loss function
     print(f"\nCreating loss function...")
+    loss_type = "SI-log" if args.use_silog else "L1"
     if args.use_adaptive_loss:
         criterion = AdaptiveBaseResidualLoss(
             lambda_recon_init=args.lambda_recon * 0.5,
             lambda_base_init=args.lambda_base * 2.0,
             lambda_sparse=args.lambda_sparse,
             warmup_epochs=args.warmup_epochs,
-            lowpass_kernel=args.lowpass_kernel
+            lowpass_kernel=args.lowpass_kernel,
+            use_silog=args.use_silog,
+            silog_lambda=args.silog_lambda
         ).to(device)
-        print(f"Using Adaptive Loss (warmup: {args.warmup_epochs} epochs)")
+        print(f"Using Adaptive Loss (warmup: {args.warmup_epochs} epochs, recon: {loss_type})")
     else:
         criterion = BaseResidualLoss(
             lambda_recon=args.lambda_recon,
             lambda_base=args.lambda_base,
             lambda_sparse=args.lambda_sparse,
-            lowpass_kernel=args.lowpass_kernel
+            lowpass_kernel=args.lowpass_kernel,
+            use_silog=args.use_silog,
+            silog_lambda=args.silog_lambda
         ).to(device)
-        print(f"Using Fixed Loss")
+        print(f"Using Fixed Loss (recon: {loss_type})")
     
     # Create optimizer
     if cfg.mode.optimizer == 'Adam':
@@ -295,13 +305,15 @@ Examples:
                 'epochs': cfg.mode.epochs,
                 'base_channels': args.base_channels,
                 'adaptive_loss': args.use_adaptive_loss,
+                'use_silog': args.use_silog,
+                'silog_lambda': args.silog_lambda,
                 'lambda_recon': args.lambda_recon,
                 'lambda_base': args.lambda_base,
                 'lambda_sparse': args.lambda_sparse,
                 'lowpass_kernel': args.lowpass_kernel,
                 'audio_format': cfg.dataset.audio_format,
             },
-            tags=['base_residual', cfg.dataset.name, 'layout_learning']
+            tags=['base_residual', cfg.dataset.name, 'layout_learning', 'silog' if args.use_silog else 'l1']
         )
         print(f"W&B initialized: {experiment_name}")
     
