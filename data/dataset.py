@@ -1,5 +1,6 @@
 """SoundSpaces dataset: binaural echoes -> ERP depth."""
 
+import json
 import os
 import numpy as np
 import torch
@@ -10,9 +11,27 @@ import torchaudio.transforms as T
 
 from .sh_basis import sh_basis_matrix, reconstruct_per_component_maps
 
+SPLIT_FILENAME = 'scene_split.json'
+
 
 def get_scene_split(dataset_dir, split_ratio, seed=42):
-    """Deterministic train/val/test scene splitting."""
+    """Load or create a deterministic train/val/test scene split.
+
+    On first call, generates the split from split_ratio and seed, then saves
+    it as scene_split.json inside dataset_dir. On subsequent calls, loads the
+    saved split directly so the assignment is always explicit.
+    """
+    split_path = os.path.join(dataset_dir, SPLIT_FILENAME)
+
+    if os.path.exists(split_path):
+        with open(split_path, 'r') as f:
+            split = json.load(f)
+        print(f"Loaded scene split from {split_path}")
+        print(f"  train: {len(split['train'])}, "
+              f"val: {len(split['val'])}, test: {len(split['test'])}")
+        return split
+
+    # First run: generate and persist
     scenes = sorted([
         d for d in os.listdir(dataset_dir)
         if os.path.isdir(os.path.join(dataset_dir, d))
@@ -27,7 +46,11 @@ def get_scene_split(dataset_dir, split_ratio, seed=42):
         'val': sorted(scenes[n_train:n_train + n_val]),
         'test': sorted(scenes[n_train + n_val:]),
     }
-    print(f"Scene split — train: {len(split['train'])}, "
+
+    with open(split_path, 'w') as f:
+        json.dump(split, f, indent=2)
+    print(f"Created and saved scene split to {split_path}")
+    print(f"  train: {len(split['train'])}, "
           f"val: {len(split['val'])}, test: {len(split['test'])}")
     return split
 
