@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from models import (
-    define_G, AudioDepthFOAGenerator,
+    define_G, AudioDepthFOAGenerator, EchoDiffusion,
     DepthLoss, FOAGuidedLoss, SHHistogramAlignmentLoss, AudioDepthFOALoss,
 )
 
@@ -13,9 +13,15 @@ def is_foa_model(cfg):
     return getattr(cfg.model, 'name', 'unet_baseline') == 'audio_depth_foa'
 
 
+def is_echodiffusion_model(cfg):
+    return getattr(cfg.model, 'name', '') == 'echodiffusion'
+
+
 def build_model(cfg, gpu_ids):
     """Build model based on config."""
-    if is_foa_model(cfg):
+    model_name = getattr(cfg.model, 'name', 'unet_baseline')
+
+    if model_name == 'audio_depth_foa':
         num_downs = 7 if cfg.model.generator == 'unet_128' else 8
         net = AudioDepthFOAGenerator(
             cfg, input_nc=2, output_nc=1, num_downs=num_downs, ngf=64,
@@ -27,6 +33,17 @@ def build_model(cfg, gpu_ids):
             scale_shift_layers=getattr(cfg.model, 'scale_shift_layers', 4),
             H_erp=int(cfg.dataset.images_size[0]),
             W_erp=int(cfg.dataset.images_size[1]),
+        )
+        if len(gpu_ids) > 0:
+            assert torch.cuda.is_available()
+            net = net.to(gpu_ids[0])
+            net = nn.DataParallel(net, gpu_ids)
+        return net
+    elif model_name == 'echodiffusion':
+        net = EchoDiffusion(
+            max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
+            embed_dim=getattr(cfg.model, 'embed_dim', 192),
+            emb_dim=getattr(cfg.model, 'emb_dim', 768),
         )
         if len(gpu_ids) > 0:
             assert torch.cuda.is_available()
