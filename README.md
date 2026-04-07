@@ -1,48 +1,45 @@
-# Audio-Visual Batvision Dataset
+# UNetSoundOnly — Depth Estimation from Binaural Echoes
 
-This repository contains the official codebase for "The Audio-Visual BatVision Dataset for Research on Sight and Sound" (IROS 2023).
+Audio-based depth estimation using UNet architecture on the SoundSpaces dataset.
 
-[Project Page](https://amandinebtto.github.io/Batvision-Dataset/) | [Dataset](https://cloud.minesparis.psl.eu/index.php/s/qurl3oySgTmT85M) | [Mirror Dataset Link](https://entrepot.recherche.data.gouv.fr/dataset.xhtml?persistentId=doi:10.57745/HYLZNL) | [Paper](https://ieeexplore.ieee.org/abstract/document/10341715)
+## Structure
 
-For help contact amandine.brunetto [a.t] minesparis.psl.eu or open an issue.
-
-## Dataset
-The BatVision dataset is separated in two parts: BatVision V1, recorded at UC Berkely and BatVision V2, recorded at Ecole des Mines de Paris. While BV1 contains more data, BV2 contains more complex scenes featuring a wide variety of material, room shapes and objects (including a few outdoor data).
-
-Binaural echoes are 0.5s long and sampled at 44,1kHz. They are synchronized with corresponding RGB-D images.
-
-To get more information about the data and data collection, please check out our [project page](https://amandinebtto.github.io/Batvision-Dataset/) and [paper](https://ieeexplore.ieee.org/abstract/document/10341715).
-
-## Usage
-
-### Data
-Batvision V1 and BatVision V2 have csv files necessary to split data in train, val and test.
-
-All data of BatVision V1 are listed in `BatvisionV1/train.csv`, `val.csv` and `test.csv`.
-In BatVision V2, each location is stored in separate folders containing `train.csv`, `val.csv` and `test.csv`.
-
-Examples of dataloader are located in `UNetSoundOnly/dataloader`. 
-
-### U-Net Baseline
-We provide the code of the baseline presented in the paper. It consists in a U-Net architecture taking recorded binaural echoes as input to predict depth in the robot's field-of-view. 
-
-Hydra is used for config file management. Examples of config files are given in `UNetSoundOnly/conf`. 
-The code support TensorBoard for training visualization. 
-
-
-## Citation
-If you find this repository or the dataset useful, please cite:
 ```
-@INPROCEEDINGS{10341715,
-  author={Brunetto, Amandine and Hornauer, Sascha and Yu, Stella X. and Moutarde, Fabien},
-  booktitle={2023 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
-  title={The Audio-Visual BatVision Dataset for Research on Sight and Sound}, 
-  year={2023},
-  volume={},
-  number={},
-  pages={1-8},
-  doi={10.1109/IROS55552.2023.10341715}}
+├── config.yaml          # Dataset, model, train/test settings
+├── train.py             # Training entry point
+├── test.py              # Testing entry point
+├── data/                # Dataset & dataloader
+│   ├── dataset.py       # SoundSpacesDataset
+│   ├── dataloader.py    # make_dataloader
+│   └── sh_basis.py      # Spherical Harmonics (ACN/SN3D)
+├── models/              # Network architecture & losses
+│   ├── unet.py          # UNet generator (pix2pix-based)
+│   └── losses.py        # SIlog loss
+├── utils/               # Helpers
+│   ├── config.py        # YAML config loader
+│   ├── metrics.py       # Depth error metrics
+│   ├── visualization.py # Prediction visualizations
+│   ├── train_utils.py   # Model/criterion builders
+│   └── test_utils.py    # Evaluation loop
+└── scripts/             # Shell scripts
+    ├── train.sh
+    └── test.sh
 ```
 
-## License
-The Audio-Visual BatVision Dataset is CC-BY-SA-4.0 licensed, as found in the LICENSE file.
+## Quick Start
+
+```bash
+# Train
+python train.py --lr 0.001 --batch-size 32 --epochs 40
+
+# Test
+python test.py --eval-on test --checkpoints best
+
+# Or use shell scripts
+bash scripts/train.sh
+bash scripts/test.sh
+```
+
+## Config
+
+All settings are in `config.yaml`. CLI arguments override config values.

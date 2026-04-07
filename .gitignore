@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+checkpoints/
+results/
+eval/
+outputs/
+wandb/
+*.pt
+*.pth
+.env
