@@ -49,7 +49,13 @@ Always follow these principles when working on this repository:
 baseline/
 ├── config/                      # Per-model YAML configs
 │   ├── baseline.yaml            # UNet baseline config
-│   └── foa.yaml                 # FOA (UNet + SH branch) config
+│   ├── echodiffusion.yaml       # EchoDiffusion config
+│   ├── foa.yaml                 # FOA (UNet + SH branch) config
+│   ├── foa_crossattn.yaml       # FOA + Cross-Attention Bridge
+│   ├── foa_featbank.yaml        # FOA + Feature Bank
+│   ├── foa_msattn.yaml          # FOA + Multi-Scale Attention
+│   ├── foa_channelattn.yaml     # FOA + Channel Attention (SE)
+│   └── vit.yaml                 # ViT baseline config
 ├── train.py                     # Training entry point (with W&B)
 ├── test.py                      # Testing/evaluation entry point
 ├── data/                        # Dataset & dataloader
@@ -59,7 +65,22 @@ baseline/
 ├── models/                      # Network architectures & losses
 │   ├── unet.py                  # UNet generator (pix2pix-based)
 │   ├── unet_foa.py              # AudioDepthFOAGenerator, DeepScaleShift
-│   └── losses.py                # DepthLoss, FOA losses, SH alignment
+│   ├── foa_crossattn.py         # FOACrossAttnGenerator
+│   ├── foa_featbank.py          # FOAFeatBankGenerator
+│   ├── foa_msattn.py            # FOAMultiScaleAttnGenerator
+│   ├── foa_channelattn.py       # FOAChannelAttnGenerator
+│   ├── vit.py                   # AudioDepthViT (ViT encoder + conv decoder)
+│   ├── echonet/                 # Echo-Net (Parida et al., CVPR 2021)
+│   │   ├── __init__.py
+│   │   └── echonet.py           # EchoNet: full audio-visual (image=zeros)
+│   ├── batvision/               # BatVision UNet (Brunetto et al., IROS 2023)
+│   │   ├── __init__.py
+│   │   └── batvision.py         # BatVisionUNet: 8-block pix2pix UNet
+│   ├── pretrain/                # Pretrained ImageNet backbones
+│   │   ├── __init__.py
+│   │   ├── pretrained_vit.py    # PretrainedViT: ViT-B/16 + decoder
+│   │   └── pretrained_resnet.py # PretrainedResNet: ResNet-50 + FPN decoder
+│   └── losses.py                # DepthLoss, FOA losses, SH alignment, KL
 ├── utils/                       # Helpers
 │   ├── config.py                # load_config(config_name, mode, exp)
 │   ├── metrics.py               # compute_errors, compute_foa_errors
@@ -68,7 +89,11 @@ baseline/
 │   └── test_utils.py            # evaluate
 ├── scripts/                     # Shell scripts
 │   ├── train.sh
-│   └── test.sh
+│   ├── test.sh
+│   ├── bulk_train.sh            # Parallel training: 4 models × 2 GPUs
+│   ├── bulk_test.sh             # Parallel testing: 4 models × 2 GPUs
+│   ├── bulk0407_55exps.sh       # 55-experiment sweep (5 slots × 2 GPUs, GPUs 0-9)
+│   └── bulk0408_65exps.sh       # 65-experiment sweep (4 slots × 2 GPUs, GPUs 0-7)
 ├── program.md                   # This file
 ├── README.md
 ├── .gitignore
@@ -108,7 +133,13 @@ baseline/
 
 Configs live in `config/` as separate YAML files per model variant:
 - `config/baseline.yaml` -- UNet baseline (no ambisonic)
+- `config/echodiffusion.yaml` -- EchoDiffusion (diffusion UNet + CIDE conditioning)
+- `config/echonet.yaml` -- Echo-Net (full audio-visual, image branch deactivated)
+- `config/batvision.yaml` -- BatVision UNet (8-block pix2pix UNet, audio-only)
+- `config/pretrain_vit.yaml` -- Pretrained ViT-B/16 (ImageNet) + decoder
+- `config/pretrain_resnet.yaml` -- Pretrained ResNet-50 (ImageNet) + FPN decoder
 - `config/foa.yaml` -- FOA model (UNet + SH branch, with ambisonic)
+- `config/vit.yaml` -- ViT baseline (Vision Transformer encoder + conv decoder)
 
 Select config via `--config` flag:
 ```bash
@@ -212,7 +243,181 @@ Input: (B, 2, H, W) binaural spectrogram
 | depth loss | BerHu (w=1.0) + SILog (w=0.5) |
 | total params | ~55M |
 
-### 6.3 FOA Freeze Warmup
+### 6.3 EchoDiffusion (`config/echodiffusion.yaml`)
+
+Diffusion UNet backbone repurposed as a feature extractor. Located in `models/echodiffusion/`.
+
+```
+Input: (B, 2, H, W) binaural spectrogram + (B, 2, T) raw waveform
+  ├── ASPP+ASFF UNet -> 128ch latent (32x32)
+  ├── CIDE: Wav2Vec2 -> scene embeddings -> cross-attention context
+  ├── Diffusion UNet (t=1) -> hierarchical features
+  ├── Feature aggregation + Decoder -> depth (B, 1, H, W)
+  Output: depth map resized to original input dimensions (nearest interpolation)
+```
+
+| Parameter | Value |
+|-----------|-------|
+| embed_dim | 192 |
+| emb_dim (CIDE) | 768 |
+| optimizer | AdamW, lr=0.0001 |
+| batch_size | 32 |
+| depth loss | BerHu (w=1.0) + SILog (w=0.5) |
+
+### 6.4 ViT Baseline (`config/vit.yaml`)
+
+Vision Transformer encoder with convolutional decoder. Located in `models/vit.py`.
+
+```
+Input: (B, 2, H, W) binaural spectrogram
+  ├── Patch embedding (16x16 patches) -> sequence of tokens
+  ├── CLS token + learnable positional embedding
+  ├── Transformer encoder (12 layers, 12 heads, dim=768)
+  ├── ConvDecoder: progressive upsampling (4 stages) -> depth
+  Output: (B, 1, H, W) depth map (nearest interpolation if size mismatch)
+```
+
+| Parameter | Value |
+|-----------|-------|
+| patch_size | 16 |
+| embed_dim | 768 |
+| depth | 12 layers |
+| num_heads | 12 |
+| mlp_ratio | 4.0 |
+| optimizer | AdamW, lr=0.0001 |
+| batch_size | 32 |
+| depth loss | BerHu (w=1.0) + SILog (w=0.5) |
+| total params | ~87M |
+
+### 6.5 FOA Variants (4 architectures)
+
+All FOA variants share the base UNet encoder-decoder + SH branch from AudioDepthFOAGenerator, but add different bridge modules and KL divergence regularization.
+
+| Variant | Config | Bridge Module | KL Loss Target |
+|---------|--------|--------------|----------------|
+| `foa_crossattn` | `foa_crossattn.yaml` | Cross-attention (SH queries, encoder KV) | VAE latent (mu, logvar) |
+| `foa_featbank` | `foa_featbank.yaml` | Learnable feature bank (K=64 prototypes) | Bank attention uniformity |
+| `foa_msattn` | `foa_msattn.yaml` | Multi-scale attention across encoder levels | Scale attention uniformity |
+| `foa_channelattn` | `foa_channelattn.yaml` | SE channel attention on bottleneck + skips | Channel attention uniformity |
+
+All variants output a `kl_loss` key in their forward dict, weighted by `kl_weight` (default 0.01) in the loss.
+
+### 6.6 Echo-Net (`config/echonet.yaml`)
+
+Full architecture from "Beyond Image to Depth" (Parida et al., CVPR 2021). Located in `models/echonet/`. Image input is **deactivated** (fed as zeros), but the image branch is preserved and trainable.
+
+```
+Input: (B, 2, H, W) binaural spectrogram
+  ├── (1) Echo SubNet   – 3-conv encoder → 512-d bottleneck → 7 upconv decoder
+  │       echo → D_echo (B,1,H,W) + feat (B,512,1,1)
+  ├── (2) Visual SubNet – 5-level UNet with skip connections (input: zeros)
+  │       zeros(B,3,H,W) → D_image (B,1,H,W) + feat (B,512,h,w)
+  ├── (3) Material SubNet – ResNet-18 backbone (input: zeros)
+  │       zeros(B,3,H,W) → feat (B,512,h,w)
+  ├── (4) Multimodal Fusion – bilinear(img,echo) + bilinear(mat,echo) → concat
+  │       → fused (B,1024,h,w)
+  ├── (5) Attention Net – 5 upconv layers → α ∈ [0,1] per pixel
+  └── Final: D = α ⊙ D_echo + (1 − α) ⊙ D_image
+  Output: (B, 1, H, W) depth map
+```
+
+| Parameter | Value |
+|-----------|-------|
+| conv1x1_dim | 8 |
+| bottleneck_dim | 512 |
+| optimizer | AdamW, lr=0.001 |
+| batch_size | 32 |
+| depth loss | BerHu (w=1.0) + SILog (w=0.5) |
+| total params | ~321M (fusion bilinear layers dominate) |
+
+Run: `python train.py --config echonet --experiment-name echonet_baseline`
+
+### 6.7 BatVision UNet (`config/batvision.yaml`)
+
+Audio-only depth prediction from "The Audio-Visual BatVision Dataset for Research on Sight and Sound" (Brunetto, Hornauer, Yu, Moutarde — IROS 2023). Located in `models/batvision/`.
+
+```
+Input: (B, 2, H, W) binaural spectrogram
+  ├── 8-block pix2pix-style recursive UNet with skip connections
+  │   Encoder: Conv2d(k=4,s=2,p=1) + BatchNorm + LeakyReLU(0.2)
+  │   Decoder: ConvTranspose2d(k=4,s=2,p=1) + BatchNorm + ReLU
+  │   Skip connections via channel concatenation
+  │   Filter progression: 64→128→256→512→512→512→512→512 (bottleneck)
+  │   Output: Sigmoid (depth_norm=True)
+  Output: (B, 1, H, W) depth map
+```
+
+| Parameter | Value |
+|-----------|-------|
+| num_downs | 8 (unet_256) |
+| ngf | 64 |
+| optimizer | AdamW, lr=0.001 |
+| batch_size | 32 |
+| depth loss | BerHu (w=1.0) + SILog (w=0.5) |
+| total params | ~54M |
+
+Run: `python train.py --config batvision --experiment-name batvision_baseline`
+
+### 6.8 Pretrained ViT-B/16 (`config/pretrain_vit.yaml`)
+
+ImageNet-pretrained ViT-B/16 encoder adapted for audio-to-depth. Located in `models/pretrain/pretrained_vit.py`.
+
+The 2-channel spectrogram is projected to 3-channel pseudo-RGB via a learnable `Conv2d(2, 3, 1)` input adapter, enabling direct use of ImageNet-pretrained weights. Positional embeddings are bicubically interpolated from the original 14×14 grid to 16×32 at init.
+
+```
+Input: (B, 2, H, W) binaural spectrogram
+  ├── Input adapter: Conv2d(2→3, 1×1) — spectrogram → pseudo-RGB
+  ├── Patch embedding: Conv2d(3→768, k=16, s=16) → (B, 512, 768) tokens
+  ├── Prepend CLS token + interpolated positional embedding
+  ├── ViT-B/16 Transformer encoder (12 layers, 12 heads, dim=768)
+  ├── Drop CLS, reshape patch tokens to (768, 16, 32) spatial grid
+  ├── Progressive ConvTranspose decoder: 768→256→128→64→32→16→1
+  Output: (B, 1, H, W) depth map (bilinear resize if needed)
+```
+
+| Parameter | Value |
+|-----------|-------|
+| backbone | ViT-B/16 (ImageNet pretrained) |
+| pretrained | true |
+| freeze_encoder | false (fine-tune all) |
+| optimizer | AdamW, lr=0.0001 |
+| batch_size | 16 |
+| total params | ~90M |
+
+Run: `python train.py --config pretrain_vit --experiment-name pretrain_vit`
+
+### 6.9 Pretrained ResNet-50 (`config/pretrain_resnet.yaml`)
+
+ImageNet-pretrained ResNet-50 encoder with FPN-style decoder for audio-to-depth. Located in `models/pretrain/pretrained_resnet.py`.
+
+Same `Conv2d(2, 3, 1)` input adapter as ViT. Fully convolutional — handles (256, 512) natively without resizing. Multi-scale features from layers 1–4 are progressively decoded with skip connections.
+
+```
+Input: (B, 2, H, W) binaural spectrogram
+  ├── Input adapter: Conv2d(2→3, 1×1) — spectrogram → pseudo-RGB
+  ├── ResNet-50 encoder (multi-scale features):
+  │     stem  (64,  H/4, W/4)
+  │     layer1 (256, H/4, W/4)
+  │     layer2 (512, H/8, W/8)
+  │     layer3 (1024, H/16, W/16)
+  │     layer4 (2048, H/32, W/32)
+  ├── FPN decoder with skip connections:
+  │     reduce4(2048→512) → +layer3 → +layer2 → +layer1 → +stem → head(→1)
+  Output: (B, 1, H, W) depth map
+```
+
+| Parameter | Value |
+|-----------|-------|
+| backbone | ResNet-50 (ImageNet V2 pretrained) |
+| pretrained | true |
+| freeze_encoder | false (fine-tune all) |
+| optimizer | AdamW, lr=0.0001 |
+| batch_size | 32 |
+| total params | ~30M |
+
+Run: `python train.py --config pretrain_resnet --experiment-name pretrain_resnet`
+
+### 6.10 FOA Freeze Warmup
 
 `foa_freeze_epochs` controls a warmup period where only the depth branch trains.
 During freeze: SH branch (audio_proj, foa_head, hoa_head, scale_shift) has requires_grad=False.
@@ -259,11 +464,14 @@ Without ambisonic (baseline), returns a **2-tuple**: `(audio, gt_depth)`.
 
 ## 9. Best Model Selection Policy
 
-Use RMSE as primary selection metric. Always monitor both abs_rel and RMSE.
+Best model is selected by **weighted score**: `0.7 * RMSE + 0.3 * abs_rel` (lower is better).
+
+This prevents early-epoch models with good abs_rel but poor qualitative (RMSE) results from being selected.
 
 Required rule:
 - Never save best checkpoint based on abs_rel alone
 - Log all 7 metrics for every best-model update
+- Track and log the weighted score alongside RMSE and abs_rel
 
 ---
 
@@ -301,7 +509,72 @@ eval/{dataset_name}/{split}/stats_{experiment_name}.pt
 
 ## 13. Experiment Registry
 
-_(Add experiments below as they are run.)_
+### Sanity check: 5-epoch test (2026-04-07)
+
+All 4 models trained for 5 epochs on 2 GPUs each (8 GPUs total). No errors.
+
+| Model | GPUs | Train Loss | Val RMSE | Val ABS_REL | Val Delta1 |
+|-------|------|-----------|----------|-------------|------------|
+| baseline | 0,1 | 0.1905 | 1.3456 | 0.4054 | 0.4536 |
+| echodiffusion | 2,3 | 0.1918 | 1.3088 | 0.4028 | 0.4913 |
+| foa | 4,5 | 0.2426 | 1.2958 | 0.4597 | 0.4936 |
+| vit | 6,7 | 0.2021 | 1.3297 | 0.4287 | 0.4610 |
+
+### 55-Experiment Sweep (2026-04-07) — `scripts/bulk0407_55exps.sh`
+
+Run: `bash scripts/bulk0407_55exps.sh`
+- 5 concurrent slots × 2 GPUs each = 10 GPUs
+- 40 epochs per experiment, validation every 4 epochs
+- Logs in `logs/bulk0407/`
+
+| Exp | Model | What varies |
+|-----|-------|------------|
+| 01-05 | baseline | lr ∈ {1e-3, 5e-4, 1e-4}, bs ∈ {32, 16} |
+| 06-10 | vit | lr ∈ {1e-4, 5e-5, 5e-4, 1e-5}, bs ∈ {32, 16} |
+| 11-15 | echodiffusion | lr ∈ {1e-4, 5e-5, 5e-4, 1e-5}, bs ∈ {32, 16} |
+| 16-20 | foa_crossattn | lr ∈ {1e-3, 5e-4, 1e-4}, foa_weight ∈ {0.1, 0.2} |
+| 21-25 | foa_featbank | lr ∈ {1e-3, 5e-4, 1e-4}, foa_weight ∈ {0.1, 0.2} |
+| 26-30 | foa_msattn | lr ∈ {1e-3, 5e-4, 1e-4}, foa_weight ∈ {0.1, 0.2} |
+| 31-35 | foa_channelattn | lr ∈ {1e-3, 5e-4, 1e-4}, foa_weight ∈ {0.1, 0.2} |
+| 36-55 | foa (original) | lr, bs, depth_weight, foa_weight, hist_weight, foa_freeze_epochs |
+
+### 65-Experiment Sweep (2026-04-08) — `scripts/bulk0408_65exps.sh`
+
+Run: `bash scripts/bulk0408_65exps.sh`
+- 4 concurrent slots × 2 GPUs each = 8 GPUs (0-7)
+- 40 epochs per experiment, validation every 4 epochs
+- Logs in `logs/bulk0408/`
+- Index 56–120 (no conflict with bulk0407 exps 01–55)
+
+**Group A — New model baselines (20 exps: 56–75)**
+
+| Exp | Model | What varies |
+|-----|-------|------------|
+| 56-60 | pretrain_resnet | lr ∈ {1e-4, 5e-5, 5e-4, 3e-4}, bs ∈ {16, 32} |
+| 61-65 | pretrain_vit | lr ∈ {1e-4, 5e-5, 5e-4, 3e-5}, bs ∈ {8, 16} |
+| 66-70 | echonet | lr ∈ {1e-3, 5e-4, 1e-4, 2e-3}, bs ∈ {8, 16} |
+| 71-75 | batvision | lr ∈ {1e-3, 5e-4, 1e-4, 2e-3}, bs ∈ {16, 32} |
+
+**Group B — FOA variants, new combos (20 exps: 76–95)**
+
+| Exp | Model | What varies (vs 0407: new kl_weight, fw, hw combos) |
+|-----|-------|------------|
+| 76-80 | foa_crossattn | fw ∈ {0.05, 0.1, 0.2, 0.3}, kl ∈ {0.005, 0.01, 0.02}, hw=0.2 |
+| 81-85 | foa_featbank | fw ∈ {0.05, 0.1, 0.2, 0.3}, kl ∈ {0.005, 0.01, 0.02}, hw=0.2 |
+| 86-90 | foa_msattn | fw ∈ {0.05, 0.1, 0.2, 0.3}, kl ∈ {0.005, 0.01, 0.02}, hw=0.2 |
+| 91-95 | foa_channelattn | fw ∈ {0.05, 0.1, 0.2, 0.3}, kl ∈ {0.005, 0.01, 0.02}, hw=0.2 |
+
+**Group C — FOA main, wider search (25 exps: 96–120)**
+
+| Exp | What varies |
+|-----|------------|
+| 96-98 | lr ∈ {2e-4, 3e-4, 7e-4} (new LR points) |
+| 99-102 | dw ∈ {1.5}, fw ∈ {0.15}, hw ∈ {0.15} (intermediate values) |
+| 103-107 | fw ∈ {0.15, 0.3}, hw ∈ {0.15, 0.3} (wider range) |
+| 108 | dw=2.0 at lr=5e-4 |
+| 109-112 | freeze ∈ {3, 5, 10, 15} (freeze schedule sweep) |
+| 113-115 | extreme combos: fw=0.05/hw=0.05, dw=2.0/fw=0.2, dw=0.5/hw=0.2 |
+| 116-120 | lr ∈ {3e-4, 2e-4, 7e-4}, bs=16, foa_freeze combos |
 
 ---
 

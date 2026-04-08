@@ -4,32 +4,36 @@ import numpy as np
 import torch
 
 from .metrics import compute_errors, compute_foa_errors
-from .train_utils import is_foa_model
+from .train_utils import is_foa_model, is_echodiffusion_model
 
 
 def evaluate(model, eval_loader, eval_set, cfg, device):
     """Run evaluation. Returns (depth_errors, foa_errors_list_or_None)."""
     model.eval()
     depth_errors = []
-    foa_errors = [] if is_foa_model(cfg) else None
+    foa = is_foa_model(cfg)
+    echodiff = is_echodiffusion_model(cfg)
+    foa_errors = [] if foa else None
     batch_size = cfg.mode.batch_size
 
     with torch.no_grad():
         for batch_idx, batch in enumerate(eval_loader):
-            if is_foa_model(cfg):
+            if foa:
                 audio, depthgt, gt_foa_batch, _ = batch
                 gt_foa_batch = gt_foa_batch.to(device)
-            else:
-                audio, depthgt = batch
-
-            audio, depthgt = audio.to(device), depthgt.to(device)
-
-            raw_out = model(audio)
-            if isinstance(raw_out, dict):
+                audio, depthgt = audio.to(device), depthgt.to(device)
+                raw_out = model(audio)
                 depth_pred = raw_out["pred_depth"]
                 pred_foa_batch = raw_out["pred_foa"]
+            elif echodiff:
+                audio, depthgt, waveform = batch
+                audio, depthgt = audio.to(device), depthgt.to(device)
+                waveform = waveform.to(device)
+                depth_pred = model(audio, waveform)
             else:
-                depth_pred = raw_out
+                audio, depthgt = batch[0], batch[1]
+                audio, depthgt = audio.to(device), depthgt.to(device)
+                depth_pred = model(audio)
 
             for idx in range(depth_pred.shape[0]):
                 gt_map = depthgt[idx, 0].cpu().numpy()

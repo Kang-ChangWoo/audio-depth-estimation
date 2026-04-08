@@ -106,12 +106,33 @@ class SHHistogramAlignmentLoss(nn.Module):
         return loss
 
 
+class KLDivRegLoss(nn.Module):
+    """KL divergence regularization for a latent vector.
+
+    Assumes latent is parameterized as N(mu, sigma) and regularizes toward N(0, 1).
+    Can also accept a pre-computed scalar KL loss from the model.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, mu, logvar=None):
+        """Compute KL(N(mu, sigma) || N(0, 1)).
+
+        If logvar is None, assumes mu is already a pre-computed KL scalar.
+        """
+        if logvar is None:
+            return mu  # pre-computed KL loss
+        return -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+
+
 class AudioDepthFOALoss(nn.Module):
-    """Combined loss for FOA model: depth + FOA + histogram alignment."""
+    """Combined loss for FOA model: depth + FOA + histogram alignment + optional KL."""
 
     def __init__(self, depth_criterion, foa_criterion=None,
                  depth_weight=1.0, foa_weight=0.1,
-                 hist_criterion=None, hist_weight=0.1, latent_reg_weight=0.0):
+                 hist_criterion=None, hist_weight=0.1, latent_reg_weight=0.0,
+                 kl_weight=0.0):
         super().__init__()
         self.depth_criterion = depth_criterion
         self.foa_criterion = foa_criterion if foa_criterion is not None else FOAGuidedLoss()
@@ -120,6 +141,7 @@ class AudioDepthFOALoss(nn.Module):
         self.foa_weight = foa_weight
         self.hist_weight = hist_weight
         self.latent_reg_weight = latent_reg_weight
+        self.kl_weight = kl_weight
 
     def forward(self, outputs, gt_depth, gt_foa,
                 gt_depth_sh=None, gt_depth_sh_coeffs=None):
@@ -154,12 +176,19 @@ class AudioDepthFOALoss(nn.Module):
         if self.latent_reg_weight > 0:
             latent_reg = (foa_latent ** 2).mean()
 
+        # KL divergence loss from FOA variant models
+        kl_loss = torch.tensor(0.0, device=pred_depth.device)
+        if self.kl_weight > 0 and "kl_loss" in outputs:
+            kl_loss = outputs["kl_loss"]
+
         total = (self.depth_weight * depth_loss
                  + self.foa_weight * foa_loss
                  + self.hist_weight * hist_loss
-                 + self.latent_reg_weight * latent_reg)
+                 + self.latent_reg_weight * latent_reg
+                 + self.kl_weight * kl_loss)
 
         return {
             "total": total, "depth": depth_loss,
             "foa": foa_loss, "hist": hist_loss,
+            "kl": kl_loss,
         }

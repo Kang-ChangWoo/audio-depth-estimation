@@ -1,0 +1,29 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
+wandb: Currently logged in as: branden to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run tvow1fhg
+wandb: Tracking run with wandb version 0.25.1
+wandb: Run data is saved locally in /root/storage/implementation/shared_audio/baseline/wandb/run-20260408_141205-tvow1fhg
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run unet_256_soundspaces_BS32_Lr0.0001_AdamW_exp38_foa_lr1e4_dw1.0_fw0.1_hw0.1
+wandb: ⭐️ View project at https://wandb.ai/branden/neurips_audio_depth
+wandb: 🚀 View run at https://wandb.ai/branden/neurips_audio_depth/runs/tvow1fhg
+============================================================
+Model: audio_depth_foa  Dataset: soundspaces
+BS: 32  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples from 72 scenes (filtered 5240 with >10% no-depth) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples from 9 scenes (filtered 592 with >10% no-depth) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Model: audio_depth_foa (55.0M params)
+Epoch [1/40] L:0.2991 D:0.2499 F:0.0931 H:0.3988 KL:0.0000 268s
+Epoch [2/40] L:0.2511 D:0.2122 F:0.0468 H:0.3420 KL:0.0000 277s
+Epoch [3/40] L:0.2385 D:0.1993 F:0.0424 H:0.3497 KL:0.0000 265s
+Epoch [4/40] L:0.2319 D:0.1928 F:0.0399 H:0.3504 KL:0.0000 262s
+  Val L:0.2695 ABS:0.4142 RMSE:1.2833 d1:0.4873
+  >> Best (score:1.0226 RMSE:1.2833 ABS:0.4142)
