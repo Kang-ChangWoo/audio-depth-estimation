@@ -11,7 +11,8 @@ import wandb
 
 from utils.config import load_config
 from utils.train_utils import (
-    build_model, build_criterion, is_foa_model,
+    build_model, build_criterion, is_foa_model, is_foa_variant_model,
+    is_echodiffusion_model,
     compute_gt_depth_sh, set_sh_branch_frozen,
 )
 from utils.visualization import save_batch_visualization
@@ -22,10 +23,22 @@ from data.dataloader import make_dataloader
 # ── helpers ──────────────────────────────────────────────────
 
 def _train_step_baseline(model, batch, criterion, optimizer, cfg, device):
-    audio, gtdepth = batch
+    audio, gtdepth = batch[0], batch[1]
     audio, gtdepth = audio.to(device), gtdepth.to(device)
     optimizer.zero_grad()
     pred = model(audio)
+    loss = criterion(pred, gtdepth)
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    optimizer.step()
+    return {'total': loss.item(), 'depth': loss.item()}
+
+
+def _train_step_echodiffusion(model, batch, criterion, optimizer, cfg, device):
+    audio, gtdepth, waveform = batch
+    audio, gtdepth, waveform = audio.to(device), gtdepth.to(device), waveform.to(device)
+    optimizer.zero_grad()
+    pred = model(audio, waveform)
     loss = criterion(pred, gtdepth)
     loss.backward()
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -51,13 +64,16 @@ def _train_step_foa(model, batch, criterion, optimizer, cfg, device,
                         else (None, None))
     ld = criterion(outputs, gtdepth, gt_foa,
                    gt_depth_sh=gt_dsh, gt_depth_sh_coeffs=gt_dsh_c)
+    # KL loss is already included in ld["total"] by AudioDepthFOALoss (weighted by kl_weight).
+    # Just track it for logging.
     ld["total"].backward()
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
     optimizer.step()
     return {k: v.item() for k, v in ld.items()}
 
 
-def _val_metrics(model, val_loader, criterion, cfg, device, foa, use_hist, foa_frozen):
+def _val_metrics(model, val_loader, criterion, cfg, device, foa, echodiff,
+                 use_hist, foa_frozen):
     model.eval()
     errors, val_losses = [], []
     vis_pred, vis_gt = None, None
@@ -77,8 +93,14 @@ def _val_metrics(model, val_loader, criterion, cfg, device, foa, use_hist, foa_f
                                         else (None, None))
                     lv = criterion(out, gtdepth, gt_foa_v,
                                    gt_depth_sh=gt_dsh, gt_depth_sh_coeffs=gt_dsh_c)["total"]
+            elif echodiff:
+                audio, gtdepth, waveform = batch
+                audio, gtdepth = audio.to(device), gtdepth.to(device)
+                waveform = waveform.to(device)
+                depth_pred = model(audio, waveform)
+                lv = criterion(depth_pred, gtdepth)
             else:
-                audio, gtdepth = batch
+                audio, gtdepth = batch[0], batch[1]
                 audio, gtdepth = audio.to(device), gtdepth.to(device)
                 depth_pred = model(audio)
                 lv = criterion(depth_pred, gtdepth)
@@ -115,7 +137,8 @@ def train(cfg):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     n_GPU = torch.cuda.device_count()
     gpu_ids = list(range(min(n_GPU, 4))) if n_GPU > 0 else []
-    foa = is_foa_model(cfg)
+    foa = is_foa_model(cfg) or is_foa_variant_model(cfg)
+    echodiff = is_echodiffusion_model(cfg)
 
     train_set, train_loader = make_dataloader(cfg, 'train', batch_size=cfg.mode.batch_size)
     val_set, val_loader = make_dataloader(cfg, 'val', batch_size=cfg.mode.batch_size)
@@ -166,6 +189,7 @@ def train(cfg):
     foa_freeze = getattr(cfg.model, 'foa_freeze_epochs', 0) if foa else 0
     use_hist_align = foa and getattr(cfg.model, 'hist_weight', 0) > 0
     best_rmse, best_abs_rel = float('inf'), float('inf')
+    best_score = float('inf')  # weighted: 0.7*rmse + 0.3*abs_rel
 
     for epoch in range(start_epoch, cfg.mode.epochs + 1):
         foa_frozen = foa and foa_freeze > 0 and epoch <= foa_freeze
@@ -178,13 +202,16 @@ def train(cfg):
 
         use_hist = use_hist_align and not foa_frozen
         t0 = time.time()
-        accum = {'total': [], 'depth': [], 'foa': [], 'hist': []}
+        accum = {'total': [], 'depth': [], 'foa': [], 'hist': [], 'kl': []}
 
         model.train()
         for batch in train_loader:
             if foa:
                 s = _train_step_foa(model, batch, criterion, optimizer,
                                     cfg, device, use_hist, foa_frozen)
+            elif echodiff:
+                s = _train_step_echodiffusion(model, batch, criterion, optimizer,
+                                              cfg, device)
             else:
                 s = _train_step_baseline(model, batch, criterion, optimizer,
                                          cfg, device)
@@ -194,7 +221,7 @@ def train(cfg):
 
         dt = time.time() - t0
         log = {'epoch': epoch, 'train/loss': np.mean(accum['total'])}
-        for k in ('depth', 'foa', 'hist'):
+        for k in ('depth', 'foa', 'hist', 'kl'):
             if accum[k]:
                 log[f'train/{k}'] = np.mean(accum[k])
 
@@ -202,13 +229,15 @@ def train(cfg):
         if accum['depth']: parts.append(f"D:{np.mean(accum['depth']):.4f}")
         if accum['foa']:   parts.append(f"F:{np.mean(accum['foa']):.4f}")
         if accum['hist']:  parts.append(f"H:{np.mean(accum['hist']):.4f}")
+        if accum['kl']:    parts.append(f"KL:{np.mean(accum['kl']):.4f}")
         parts.append(f"{dt:.0f}s")
         print(' '.join(parts))
 
         # Validation
         if cfg.mode.validation and epoch % cfg.mode.validation_iter == 0:
             vm, vis_p, vis_g = _val_metrics(
-                model, val_loader, criterion, cfg, device, foa, use_hist, foa_frozen)
+                model, val_loader, criterion, cfg, device, foa, echodiff,
+                use_hist, foa_frozen)
             print(f"  Val L:{vm['val_loss']:.4f} ABS:{vm['abs_rel']:.4f} "
                   f"RMSE:{vm['rmse']:.4f} d1:{vm['delta1']:.4f}")
 
@@ -220,15 +249,18 @@ def train(cfg):
                 save_batch_visualization(vis_p, vis_g, vis_path, epoch,
                                          num_samples=min(4, vis_p.shape[0]))
 
-            if vm['rmse'] < best_rmse:
+            score = 0.7 * vm['rmse'] + 0.3 * vm['abs_rel']
+            if score < best_score:
+                best_score = score
                 best_rmse, best_abs_rel = vm['rmse'], vm['abs_rel']
                 torch.save({'epoch': epoch, 'state_dict': model.state_dict(),
                             'optimizer': optimizer.state_dict(),
-                            'best_rmse': best_rmse, 'best_abs_rel': best_abs_rel},
+                            'best_rmse': best_rmse, 'best_abs_rel': best_abs_rel,
+                            'best_score': best_score},
                            os.path.join(ckpt_dir, 'best_model.pth'))
-                print(f"  >> Best (RMSE:{best_rmse:.4f} ABS:{best_abs_rel:.4f})")
-                log.update({'best/rmse': best_rmse, 'best/abs_rel': best_abs_rel,
-                            'best/epoch': epoch})
+                print(f"  >> Best (score:{best_score:.4f} RMSE:{best_rmse:.4f} ABS:{best_abs_rel:.4f})")
+                log.update({'best/score': best_score, 'best/rmse': best_rmse,
+                            'best/abs_rel': best_abs_rel, 'best/epoch': epoch})
 
         wandb.log(log)
 
@@ -237,7 +269,7 @@ def train(cfg):
                         'optimizer': optimizer.state_dict()},
                        os.path.join(ckpt_dir, f'checkpoint_{epoch}.pth'))
 
-    print(f'\nDone. Best RMSE:{best_rmse:.4f} ABS:{best_abs_rel:.4f}')
+    print(f'\nDone. Best score:{best_score:.4f} RMSE:{best_rmse:.4f} ABS:{best_abs_rel:.4f}')
     wandb.finish()
 
 
@@ -252,6 +284,10 @@ if __name__ == '__main__':
     p.add_argument('--experiment-name', type=str, default='default')
     p.add_argument('--checkpoints', type=str, default=None)
     p.add_argument('--foa-freeze-epochs', type=int, default=None)
+    p.add_argument('--depth-weight', type=float, default=None)
+    p.add_argument('--foa-weight', type=float, default=None)
+    p.add_argument('--hist-weight', type=float, default=None)
+    p.add_argument('--kl-weight', type=float, default=None)
     args = p.parse_args()
 
     cfg = load_config(config_name=args.config, mode='train',
@@ -264,6 +300,10 @@ if __name__ == '__main__':
     if args.epochs is not None:      cfg.mode.epochs = args.epochs
     if args.num_workers is not None: cfg.mode.num_threads = args.num_workers
     if args.foa_freeze_epochs is not None: cfg.model.foa_freeze_epochs = args.foa_freeze_epochs
+    if args.depth_weight is not None: cfg.model.depth_weight = args.depth_weight
+    if args.foa_weight is not None:   cfg.model.foa_weight = args.foa_weight
+    if args.hist_weight is not None:  cfg.model.hist_weight = args.hist_weight
+    if args.kl_weight is not None:    cfg.model.kl_weight = args.kl_weight
 
     print('=' * 60)
     print(f'Model: {cfg.model.name}  Dataset: {cfg.dataset.name}')

@@ -39,8 +39,8 @@ train:
   learning_rate: 0.001
   optimizer: AdamW
   validation: true
-  validation_iter: 5
-  num_threads: 16
+  validation_iter: 4
+  num_threads: 4
   batch_size: 32
   shuffle: true
   # Depth loss (shared default: BerHu + SILog)

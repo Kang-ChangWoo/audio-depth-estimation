@@ -240,7 +240,15 @@ class EchoDiffusion(nn.Module):
         )
 
     def forward(self, audio_spec, audio_wave):
+        orig_h, orig_w = audio_spec.shape[2], audio_spec.shape[3]
+        # Resize spectrogram to 128x128 for ASPP+ASFF UNet
+        if orig_h != 128 or orig_w != 128:
+            audio_spec = F.interpolate(audio_spec, size=(128, 128), mode='bilinear',
+                                       align_corners=False)
         conv_feats = self.encoder(audio_spec, audio_wave)
         out = self.decoder(conv_feats)
         out_depth = torch.sigmoid(self.last_layer_depth(out)) * self.max_depth
+        # Resize output to match original input spatial dimensions
+        if out_depth.shape[2] != orig_h or out_depth.shape[3] != orig_w:
+            out_depth = F.interpolate(out_depth, size=(orig_h, orig_w), mode='nearest')
         return out_depth

@@ -1,5 +1,6 @@
 # ============================================================
-# EchoDiffusion — config/echodiffusion.yaml
+# Pretrained ResNet-50 — config/pretrain_resnet.yaml
+# ImageNet-pretrained encoder + FPN-style decoder
 # ============================================================
 dataset:
   name: soundspaces
@@ -15,19 +16,16 @@ dataset:
   min_depth: 0.01
   max_depth: 10.0
   use_ambisonic: false
-  use_waveform: true
-  waveform_len: 5648
 
 model:
-  name: echodiffusion
-  generator: echodiffusion
-  max_depth: 10.0
-  embed_dim: 192
-  emb_dim: 768
+  name: pretrained_resnet
+  generator: pretrained_resnet
+  pretrained: true
+  freeze_encoder: false
 
 train:
   checkpoints: null
-  saving_checkpoints: 5
+  saving_checkpoints: 10
   epochs: 40
   learning_rate: 0.0001
   optimizer: AdamW
@@ -36,7 +34,6 @@ train:
   num_threads: 4
   batch_size: 32
   shuffle: true
-  # Depth loss (shared default: BerHu + SILog)
   use_berhu: true
   use_silog: true
   w_berhu: 1.0

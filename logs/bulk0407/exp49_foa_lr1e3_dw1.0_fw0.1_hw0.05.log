@@ -1,0 +1,35 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
+wandb: Currently logged in as: branden to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run mvc3f26d
+wandb: Tracking run with wandb version 0.25.1
+wandb: Run data is saved locally in /root/storage/implementation/shared_audio/baseline/wandb/run-20260408_140130-mvc3f26d
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run unet_256_soundspaces_BS32_Lr0.001_AdamW_exp49_foa_lr1e3_dw1.0_fw0.1_hw0.05
+wandb: ⭐️ View project at https://wandb.ai/branden/neurips_audio_depth
+wandb: 🚀 View run at https://wandb.ai/branden/neurips_audio_depth/runs/mvc3f26d
+============================================================
+Model: audio_depth_foa  Dataset: soundspaces
+BS: 32  LR: 0.001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples from 72 scenes (filtered 5240 with >10% no-depth) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples from 9 scenes (filtered 592 with >10% no-depth) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Model: audio_depth_foa (55.0M params)
+Epoch [1/40] L:0.2793 D:0.2541 F:0.0707 H:0.3624 KL:0.0000 143s
+Epoch [2/40] L:0.2418 D:0.2193 F:0.0494 H:0.3518 KL:0.0000 146s
+Epoch [3/40] L:0.2346 D:0.2126 F:0.0449 H:0.3519 KL:0.0000 147s
+Epoch [4/40] L:0.2266 D:0.2043 F:0.0424 H:0.3612 KL:0.0000 140s
+  Val L:0.2844 ABS:0.4118 RMSE:1.4048 d1:0.4383
+  >> Best (score:1.1069 RMSE:1.4048 ABS:0.4118)
+Epoch [5/40] L:0.2176 D:0.1950 F:0.0402 H:0.3716 KL:0.0000 227s
+Epoch [6/40] L:0.2128 D:0.1904 F:0.0379 H:0.3740 KL:0.0000 239s
+Epoch [7/40] L:0.2078 D:0.1859 F:0.0367 H:0.3645 KL:0.0000 260s
+Epoch [8/40] L:0.2031 D:0.1820 F:0.0357 H:0.3520 KL:0.0000 265s
+  Val L:0.2428 ABS:0.4235 RMSE:1.2532 d1:0.5091
+  >> Best (score:1.0043 RMSE:1.2532 ABS:0.4235)
