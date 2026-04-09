@@ -65,7 +65,12 @@ def _train_step_foa(model, batch, criterion, optimizer, cfg, device,
     ld = criterion(outputs, gtdepth, gt_foa,
                    gt_depth_sh=gt_dsh, gt_depth_sh_coeffs=gt_dsh_c)
     # KL loss is already included in ld["total"] by AudioDepthFOALoss (weighted by kl_weight).
-    # Just track it for logging.
+    # Add FOA-depth gradient consistency loss if present (foa_v2).
+    if "foa_depth_consistency" in outputs:
+        consistency = outputs["foa_depth_consistency"].mean()  # DataParallel gathers scalars into vector
+        foa_consistency_weight = getattr(cfg.model, 'foa_consistency_weight', 0.05)
+        ld["total"] = ld["total"] + foa_consistency_weight * consistency
+        ld["consistency"] = consistency
     ld["total"].backward()
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
     optimizer.step()
@@ -202,7 +207,7 @@ def train(cfg):
 
         use_hist = use_hist_align and not foa_frozen
         t0 = time.time()
-        accum = {'total': [], 'depth': [], 'foa': [], 'hist': [], 'kl': []}
+        accum = {'total': [], 'depth': [], 'foa': [], 'hist': [], 'kl': [], 'consistency': []}
 
         model.train()
         for batch in train_loader:
@@ -221,7 +226,7 @@ def train(cfg):
 
         dt = time.time() - t0
         log = {'epoch': epoch, 'train/loss': np.mean(accum['total'])}
-        for k in ('depth', 'foa', 'hist', 'kl'):
+        for k in ('depth', 'foa', 'hist', 'kl', 'consistency'):
             if accum[k]:
                 log[f'train/{k}'] = np.mean(accum[k])
 
@@ -230,6 +235,7 @@ def train(cfg):
         if accum['foa']:   parts.append(f"F:{np.mean(accum['foa']):.4f}")
         if accum['hist']:  parts.append(f"H:{np.mean(accum['hist']):.4f}")
         if accum['kl']:    parts.append(f"KL:{np.mean(accum['kl']):.4f}")
+        if accum['consistency']: parts.append(f"CON:{np.mean(accum['consistency']):.4f}")
         parts.append(f"{dt:.0f}s")
         print(' '.join(parts))
 
@@ -288,6 +294,7 @@ if __name__ == '__main__':
     p.add_argument('--foa-weight', type=float, default=None)
     p.add_argument('--hist-weight', type=float, default=None)
     p.add_argument('--kl-weight', type=float, default=None)
+    p.add_argument('--foa-consistency-weight', type=float, default=None)
     args = p.parse_args()
 
     cfg = load_config(config_name=args.config, mode='train',
@@ -304,6 +311,7 @@ if __name__ == '__main__':
     if args.foa_weight is not None:   cfg.model.foa_weight = args.foa_weight
     if args.hist_weight is not None:  cfg.model.hist_weight = args.hist_weight
     if args.kl_weight is not None:    cfg.model.kl_weight = args.kl_weight
+    if args.foa_consistency_weight is not None: cfg.model.foa_consistency_weight = args.foa_consistency_weight
 
     print('=' * 60)
     print(f'Model: {cfg.model.name}  Dataset: {cfg.dataset.name}')

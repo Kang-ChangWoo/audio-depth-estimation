@@ -27,3 +27,85 @@ Epoch [3/40] L:0.2385 D:0.1993 F:0.0424 H:0.3497 KL:0.0000 265s
 Epoch [4/40] L:0.2319 D:0.1928 F:0.0399 H:0.3504 KL:0.0000 262s
   Val L:0.2695 ABS:0.4142 RMSE:1.2833 d1:0.4873
   >> Best (score:1.0226 RMSE:1.2833 ABS:0.4142)
+Epoch [5/40] L:0.2264 D:0.1873 F:0.0385 H:0.3525 KL:0.0000 296s
+Epoch [6/40] L:0.2222 D:0.1833 F:0.0370 H:0.3526 KL:0.0000 274s
+Epoch [7/40] L:0.2179 D:0.1790 F:0.0366 H:0.3524 KL:0.0000 268s
+Epoch [8/40] L:0.2135 D:0.1746 F:0.0356 H:0.3531 KL:0.0000 269s
+  Val L:0.2598 ABS:0.3948 RMSE:1.2562 d1:0.5130
+  >> Best (score:0.9978 RMSE:1.2562 ABS:0.3948)
+Epoch [9/40] L:0.2082 D:0.1694 F:0.0350 H:0.3526 KL:0.0000 267s
+Epoch [10/40] L:0.2029 D:0.1642 F:0.0346 H:0.3521 KL:0.0000 264s
+Epoch [11/40] L:0.1970 D:0.1586 F:0.0341 H:0.3504 KL:0.0000 254s
+Epoch [12/40] L:0.1912 D:0.1527 F:0.0340 H:0.3502 KL:0.0000 249s
+  Val L:0.2620 ABS:0.3993 RMSE:1.2416 d1:0.5243
+  >> Best (score:0.9889 RMSE:1.2416 ABS:0.3993)
+Epoch [13/40] L:0.1842 D:0.1461 F:0.0335 H:0.3478 KL:0.0000 262s
+Epoch [14/40] L:0.1773 D:0.1399 F:0.0331 H:0.3415 KL:0.0000 252s
+Epoch [15/40] L:0.1698 D:0.1330 F:0.0332 H:0.3347 KL:0.0000 168s
+Epoch [16/40] L:0.1633 D:0.1273 F:0.0328 H:0.3276 KL:0.0000 137s
+  Val L:0.2621 ABS:0.4151 RMSE:1.2356 d1:0.5286
+Epoch [17/40] L:0.1565 D:0.1210 F:0.0326 H:0.3221 KL:0.0000 120s
+Epoch [18/40] L:0.1504 D:0.1153 F:0.0322 H:0.3193 KL:0.0000 121s
+Epoch [19/40] L:0.1445 D:0.1098 F:0.0320 H:0.3140 KL:0.0000 127s
+Epoch [20/40] L:0.1379 D:0.1041 F:0.0322 H:0.3057 KL:0.0000 120s
+  Val L:0.2730 ABS:0.4230 RMSE:1.2491 d1:0.5309
+Epoch [21/40] L:0.1313 D:0.0983 F:0.0320 H:0.2973 KL:0.0000 121s
+Epoch [22/40] L:0.1261 D:0.0939 F:0.0316 H:0.2907 KL:0.0000 121s
+Epoch [23/40] L:0.1207 D:0.0891 F:0.0313 H:0.2839 KL:0.0000 118s
+Epoch [24/40] L:0.1157 D:0.0853 F:0.0312 H:0.2733 KL:0.0000 119s
+  Val L:0.2831 ABS:0.4149 RMSE:1.2895 d1:0.5261
+Epoch [25/40] L:0.1109 D:0.0814 F:0.0308 H:0.2637 KL:0.0000 120s
+Epoch [26/40] L:0.1065 D:0.0778 F:0.0307 H:0.2566 KL:0.0000 120s
+Epoch [27/40] L:0.1032 D:0.0750 F:0.0301 H:0.2523 KL:0.0000 119s
+Epoch [28/40] L:0.1001 D:0.0723 F:0.0297 H:0.2488 KL:0.0000 126s
+  Val L:0.2771 ABS:0.4349 RMSE:1.2671 d1:0.5357
+Epoch [29/40] L:0.0971 D:0.0696 F:0.0294 H:0.2460 KL:0.0000 121s
+Epoch [30/40] L:0.0952 D:0.0679 F:0.0295 H:0.2443 KL:0.0000 122s
+Epoch [31/40] L:0.0922 D:0.0651 F:0.0290 H:0.2412 KL:0.0000 121s
+Epoch [32/40] L:0.0896 D:0.0629 F:0.0288 H:0.2391 KL:0.0000 121s
+  Val L:0.2785 ABS:0.4462 RMSE:1.2814 d1:0.5363
+Epoch [33/40] L:0.0878 D:0.0611 F:0.0288 H:0.2378 KL:0.0000 120s
+Epoch [34/40] L:0.0860 D:0.0596 F:0.0286 H:0.2359 KL:0.0000 120s
+Epoch [35/40] L:0.0838 D:0.0575 F:0.0280 H:0.2351 KL:0.0000 115s
+Epoch [36/40] L:0.0821 D:0.0560 F:0.0279 H:0.2337 KL:0.0000 123s
+  Val L:0.2830 ABS:0.4408 RMSE:1.2914 d1:0.5359
+Epoch [37/40] L:0.0801 D:0.0541 F:0.0279 H:0.2324 KL:0.0000 138s
+Epoch [38/40] L:0.0783 D:0.0525 F:0.0274 H:0.2310 KL:0.0000 174s
+Epoch [39/40] L:0.0773 D:0.0516 F:0.0272 H:0.2302 KL:0.0000 211s
+Epoch [40/40] L:0.0753 D:0.0498 F:0.0268 H:0.2282 KL:0.0000 152s
+wandb: updating run metadata
+wandb: uploading output.log; uploading wandb-summary.json; uploading config.yaml
+wandb: 
+wandb: Run history:
+wandb: best/abs_rel █▁▃
+wandb:   best/epoch ▁▅█
+wandb:    best/rmse █▃▁
+wandb:   best/score █▃▁
+wandb:        epoch ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:  train/depth █▇▆▆▆▆▆▅▅▅▅▅▄▄▄▄▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁
+wandb:    train/foa █▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   train/hist █▆▆▆▆▆▆▆▆▆▆▆▆▆▅▅▅▅▅▄▄▄▃▃▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁
+wandb:     train/kl ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   train/loss █▆▆▆▆▆▅▅▅▅▅▅▄▄▄▄▄▃▃▃▃▃▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁
+wandb:           +8 ...
+wandb: 
+wandb: Run summary:
+wandb: best/abs_rel 0.39933
+wandb:   best/epoch 12
+wandb:    best/rmse 1.24157
+wandb:   best/score 0.9889
+wandb:        epoch 40
+wandb:  train/depth 0.04981
+wandb:    train/foa 0.02678
+wandb:   train/hist 0.22823
+wandb:     train/kl 0
+wandb:   train/loss 0.07531
+wandb:           +8 ...
+wandb: 
+wandb: 🚀 View run unet_256_soundspaces_BS32_Lr0.0001_AdamW_exp38_foa_lr1e4_dw1.0_fw0.1_hw0.1 at: https://wandb.ai/branden/neurips_audio_depth/runs/tvow1fhg
+wandb: ⭐️ View project at: https://wandb.ai/branden/neurips_audio_depth
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20260408_141205-tvow1fhg/logs
+  Val L:0.2852 ABS:0.4348 RMSE:1.3034 d1:0.5359
+
+Done. Best score:0.9889 RMSE:1.2416 ABS:0.3993

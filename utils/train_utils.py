@@ -8,6 +8,7 @@ from models import (
     BatVisionUNet, PretrainedViT, PretrainedResNet, AudioDepthViT,
     FOACrossAttnGenerator, FOAFeatBankGenerator,
     FOAMultiScaleAttnGenerator, FOAChannelAttnGenerator,
+    FOAv2Generator,
     DepthLoss, FOAGuidedLoss, SHHistogramAlignmentLoss, AudioDepthFOALoss,
 )
 
@@ -16,6 +17,7 @@ _FOA_VARIANT_CLASSES = {
     'foa_featbank': FOAFeatBankGenerator,
     'foa_msattn': FOAMultiScaleAttnGenerator,
     'foa_channelattn': FOAChannelAttnGenerator,
+    'foa_v2': FOAv2Generator,
 }
 
 
@@ -25,7 +27,7 @@ def is_foa_model(cfg):
 
 def is_foa_variant_model(cfg):
     """Check if config specifies an FOA variant model (crossattn, featbank, msattn, channelattn)."""
-    foa_variants = ('foa_crossattn', 'foa_featbank', 'foa_msattn', 'foa_channelattn')
+    foa_variants = ('foa_crossattn', 'foa_featbank', 'foa_msattn', 'foa_channelattn', 'foa_v2')
     return getattr(cfg.model, 'name', '') in foa_variants
 
 
@@ -187,6 +189,9 @@ def build_criterion(cfg, device):
         kl_weight = 0.0
         if is_foa_variant_model(cfg):
             kl_weight = getattr(cfg.model, 'kl_weight', 0.01)
+        # foa_v2 does not use KL loss
+        if getattr(cfg.model, 'name', '') == 'foa_v2':
+            kl_weight = 0.0
 
         return AudioDepthFOALoss(
             depth_criterion=depth_criterion,

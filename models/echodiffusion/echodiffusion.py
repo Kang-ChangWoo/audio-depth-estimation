@@ -57,7 +57,14 @@ class CIDE(nn.Module):
         try:
             from transformers import Wav2Vec2Model
             self.wav2vec = Wav2Vec2Model.from_pretrained('facebook/wav2vec2-base-960h')
-            self.wav2vec.freeze_feature_extractor()
+            # Use the new freeze method (freeze_feature_extractor is deprecated)
+            try:
+                self.wav2vec.freeze_feature_encoder()
+            except AttributeError:
+                self.wav2vec.freeze_feature_extractor()
+            # Freeze ALL wav2vec params (we use it as a feature extractor only)
+            for p in self.wav2vec.parameters():
+                p.requires_grad = False
             self._has_wav2vec = True
         except (ImportError, OSError):
             print("[CIDE] Warning: Wav2Vec2 not available, using random projection fallback")
@@ -69,11 +76,37 @@ class CIDE(nn.Module):
             self._has_wav2vec = False
 
         self.conv = nn.Conv1d(2, 1, kernel_size=1)
+        # LayerNorm to stabilize wav2vec output (which can have extreme values)
+        self.wav2vec_norm = nn.LayerNorm(768)
         self.fc = nn.Sequential(nn.Linear(768, 400), nn.GELU(), nn.Linear(400, 100))
         self.m = nn.Softmax(dim=1)
-        self.embeddings = nn.Parameter(torch.randn(100, self.dim))
+        # Smaller std to prevent NaN explosion
+        self.embeddings = nn.Parameter(torch.randn(100, self.dim) * 0.02)
         self.embedding_adapter = EmbeddingAdapter(emb_dim=self.dim)
         self.gamma = nn.Parameter(torch.ones(self.dim) * 1e-4)
+
+        # Init fc and conv with small std for stability
+        for m in self.fc.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.trunc_normal_(m.weight, std=0.02)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+        nn.init.trunc_normal_(self.conv.weight, std=0.02)
+        if self.conv.bias is not None:
+            nn.init.zeros_(self.conv.bias)
+        # Init embedding_adapter fc with small std
+        for m in self.embedding_adapter.fc.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.trunc_normal_(m.weight, std=0.02)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+    def train(self, mode=True):
+        """Override to keep wav2vec frozen in eval mode always."""
+        super().train(mode)
+        if self._has_wav2vec:
+            self.wav2vec.eval()
+        return self
 
     def forward(self, x):
         # x: (B, 2, T) raw waveform
@@ -84,9 +117,13 @@ class CIDE(nn.Module):
             min_len = 400
             if x.shape[1] < min_len:
                 x = F.pad(x, (0, min_len - x.shape[1]))
+            # Normalize input to [-1, 1] range for wav2vec stability
+            x_max = x.abs().max(dim=-1, keepdim=True).values + 1e-8
+            x_norm = x / x_max
             with torch.no_grad():
-                wav2vec_output = self.wav2vec(x).last_hidden_state  # (B, T', 768)
+                wav2vec_output = self.wav2vec(x_norm).last_hidden_state  # (B, T', 768)
             wav2vec_output = wav2vec_output.mean(dim=1)  # (B, 768)
+            wav2vec_output = self.wav2vec_norm(wav2vec_output)
         else:
             if x.shape[1] < 960:
                 x = F.pad(x, (0, 960 - x.shape[1]))

@@ -177,9 +177,10 @@ class AudioDepthFOALoss(nn.Module):
             latent_reg = (foa_latent ** 2).mean()
 
         # KL divergence loss from FOA variant models
+        # .mean() is needed because DataParallel gathers per-GPU scalars into a vector
         kl_loss = torch.tensor(0.0, device=pred_depth.device)
         if self.kl_weight > 0 and "kl_loss" in outputs:
-            kl_loss = outputs["kl_loss"]
+            kl_loss = outputs["kl_loss"].mean()
 
         total = (self.depth_weight * depth_loss
                  + self.foa_weight * foa_loss

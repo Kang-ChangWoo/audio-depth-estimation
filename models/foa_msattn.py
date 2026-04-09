@@ -52,6 +52,24 @@ class MultiScaleAttention(nn.Module):
         return aggregated, attn_weights
 
 
+class FiLMConditioner(nn.Module):
+    """Modulate spatial features using a conditioning vector."""
+    def __init__(self, cond_dim, feat_channels):
+        super().__init__()
+        self.proj = nn.Linear(cond_dim, feat_channels * 2)
+        nn.init.zeros_(self.proj.weight)
+        nn.init.zeros_(self.proj.bias)
+        nn.init.ones_(self.proj.bias[:feat_channels])
+
+    def forward(self, feat, cond):
+        """feat: (B, C, H, W), cond: (B, cond_dim)"""
+        params = self.proj(cond)
+        gamma, beta = params.chunk(2, dim=1)
+        gamma = gamma.unsqueeze(-1).unsqueeze(-1)
+        beta = beta.unsqueeze(-1).unsqueeze(-1)
+        return gamma * feat + beta
+
+
 class FOAMultiScaleAttnGenerator(AudioDepthFOAGenerator):
     """UNet FOA with multi-scale attention aggregation across encoder levels."""
 
@@ -84,12 +102,16 @@ class FOAMultiScaleAttnGenerator(AudioDepthFOAGenerator):
             nn.ReLU(inplace=True),
         )
 
+        # FiLM conditioning: inject FOA latent into decoder
+        self.film = FiLMConditioner(proj_dim, feat_dim)
+
     def _ms_kl_loss(self, attn_weights):
-        """KL divergence between multi-scale attention weights and uniform prior."""
+        """KL divergence between multi-scale attention weights and uniform prior.
+        Returns a scalar (0-dim) tensor."""
         B, S = attn_weights.shape
         uniform = torch.ones_like(attn_weights) / S
         kl = (attn_weights * (torch.log(attn_weights + 1e-8) - torch.log(uniform))).sum(dim=-1).mean()
-        return kl
+        return kl  # already scalar: .mean() over batch dim
 
     def forward(self, x, return_hist_maps=False):
         enc_features = []
@@ -118,9 +140,10 @@ class FOAMultiScaleAttnGenerator(AudioDepthFOAGenerator):
         pred_hoa = self.hoa_head(foa_latent)
         pred_sh = torch.cat([pred_foa, pred_hoa], dim=1)
 
-        # Decode
+        # Decode with FiLM conditioning from FOA latent
         enc_reversed = enc_features[::-1]
         h = self.decoders[0](bottleneck)
+        h = self.film(h, foa_latent)  # FOA cue injected into decoder
         for i in range(len(self.decoders) - 1):
             h = torch.cat([enc_reversed[i], h], dim=1)
             h = self.decoders[i + 1](h)

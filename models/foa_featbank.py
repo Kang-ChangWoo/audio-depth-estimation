@@ -39,6 +39,24 @@ class FeatureBank(nn.Module):
         return retrieved, attn
 
 
+class FiLMConditioner(nn.Module):
+    """Modulate spatial features using a conditioning vector."""
+    def __init__(self, cond_dim, feat_channels):
+        super().__init__()
+        self.proj = nn.Linear(cond_dim, feat_channels * 2)
+        nn.init.zeros_(self.proj.weight)
+        nn.init.zeros_(self.proj.bias)
+        nn.init.ones_(self.proj.bias[:feat_channels])
+
+    def forward(self, feat, cond):
+        """feat: (B, C, H, W), cond: (B, cond_dim)"""
+        params = self.proj(cond)
+        gamma, beta = params.chunk(2, dim=1)
+        gamma = gamma.unsqueeze(-1).unsqueeze(-1)
+        beta = beta.unsqueeze(-1).unsqueeze(-1)
+        return gamma * feat + beta
+
+
 class FOAFeatBankGenerator(AudioDepthFOAGenerator):
     """UNet FOA with learnable feature bank bridge."""
 
@@ -63,15 +81,26 @@ class FOAFeatBankGenerator(AudioDepthFOAGenerator):
             nn.ReLU(inplace=True),
         )
 
+        # Direct linear projection from feat_dim to proj_dim (bypass audio_proj hack)
+        self.fused_proj = nn.Sequential(
+            nn.Linear(feat_dim, feat_dim),
+            nn.BatchNorm1d(feat_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(feat_dim, proj_dim),
+        )
+
+        # FiLM conditioning: inject FOA latent into decoder
+        self.film = FiLMConditioner(proj_dim, feat_dim)
+
     def _bank_kl_loss(self, attn):
-        """KL divergence between attention distribution and uniform prior (encourage diversity)."""
+        """KL divergence between attention distribution and uniform prior (encourage diversity).
+        Returns a scalar (0-dim) tensor."""
         B, K = attn.shape
         uniform = torch.ones_like(attn) / K
-        # KL(attn || uniform) = sum attn * log(attn / uniform)
         log_attn = torch.log(attn + 1e-8)
         log_uniform = torch.log(uniform)
         kl = (attn * (log_attn - log_uniform)).sum(dim=-1).mean()
-        return kl
+        return kl  # already scalar: .mean() over batch dim
 
     def forward(self, x, return_hist_maps=False):
         enc_features = []
@@ -93,17 +122,16 @@ class FOAFeatBankGenerator(AudioDepthFOAGenerator):
         # Fuse original + retrieved
         fused = self.fusion(torch.cat([pooled_flat, retrieved], dim=1))
 
-        # SH branch on fused features (re-use audio_proj but feed fused through it)
-        # We bypass the pool+flatten in audio_proj since we already have flat features
-        # Replicate the audio_proj logic: it expects pooled input
-        foa_latent = self.audio_proj(fused.unsqueeze(-1).unsqueeze(-1))
+        # SH branch on fused features using clean linear projection
+        foa_latent = self.fused_proj(fused)
         pred_foa = self.foa_head(foa_latent)
         pred_hoa = self.hoa_head(foa_latent)
         pred_sh = torch.cat([pred_foa, pred_hoa], dim=1)
 
-        # Decode
+        # Decode with FiLM conditioning from FOA latent
         enc_reversed = enc_features[::-1]
         h = self.decoders[0](bottleneck)
+        h = self.film(h, foa_latent)  # FOA cue injected into decoder
         for i in range(len(self.decoders) - 1):
             h = torch.cat([enc_reversed[i], h], dim=1)
             h = self.decoders[i + 1](h)

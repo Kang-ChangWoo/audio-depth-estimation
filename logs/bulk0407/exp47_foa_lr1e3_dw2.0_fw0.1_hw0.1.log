@@ -60,3 +60,53 @@ Epoch [27/40] L:0.2084 D:0.0890 F:0.0291 H:0.2750 KL:0.0000 273s
 Epoch [28/40] L:0.1995 D:0.0848 F:0.0285 H:0.2718 KL:0.0000 240s
   Val L:0.5217 ABS:0.4411 RMSE:1.2770 d1:0.5319
 Epoch [29/40] L:0.1912 D:0.0807 F:0.0285 H:0.2701 KL:0.0000 262s
+Epoch [30/40] L:0.1846 D:0.0775 F:0.0283 H:0.2685 KL:0.0000 281s
+Epoch [31/40] L:0.1776 D:0.0741 F:0.0279 H:0.2666 KL:0.0000 282s
+Epoch [32/40] L:0.1727 D:0.0718 F:0.0280 H:0.2640 KL:0.0000 274s
+  Val L:0.5292 ABS:0.4735 RMSE:1.2915 d1:0.5311
+Epoch [33/40] L:0.1663 D:0.0687 F:0.0277 H:0.2620 KL:0.0000 261s
+Epoch [34/40] L:0.1605 D:0.0658 F:0.0273 H:0.2613 KL:0.0000 238s
+Epoch [35/40] L:0.1556 D:0.0635 F:0.0271 H:0.2592 KL:0.0000 231s
+Epoch [36/40] L:0.1511 D:0.0613 F:0.0269 H:0.2577 KL:0.0000 236s
+  Val L:0.5263 ABS:0.4252 RMSE:1.2897 d1:0.5357
+Epoch [37/40] L:0.1477 D:0.0597 F:0.0266 H:0.2573 KL:0.0000 253s
+Epoch [38/40] L:0.1426 D:0.0572 F:0.0265 H:0.2551 KL:0.0000 239s
+Epoch [39/40] L:0.1377 D:0.0549 F:0.0264 H:0.2531 KL:0.0000 239s
+Epoch [40/40] L:0.1349 D:0.0536 F:0.0261 H:0.2519 KL:0.0000 237s
+wandb: updating run metadata
+wandb: uploading output.log
+wandb: uploading output.log; uploading wandb-summary.json; uploading config.yaml
+wandb: 
+wandb: Run history:
+wandb: best/abs_rel █▅▁
+wandb:   best/epoch ▁▅█
+wandb:    best/rmse █▁▁
+wandb:   best/score █▂▁
+wandb:        epoch ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:  train/depth █▇▇▆▆▆▆▆▅▅▅▅▅▅▅▄▄▄▄▄▃▃▃▃▃▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁
+wandb:    train/foa █▅▄▃▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   train/hist █▇██▇▇▇▇▇▇▆▆▆▅▅▄▄▄▄▄▃▃▃▃▃▃▂▂▂▂▂▂▂▂▁▁▁▁▁▁
+wandb:     train/kl ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   train/loss █▇▇▆▆▆▆▆▅▅▅▅▅▅▄▄▄▄▄▄▃▃▃▃▃▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁
+wandb:           +8 ...
+wandb: 
+wandb: Run summary:
+wandb: best/abs_rel 0.39681
+wandb:   best/epoch 12
+wandb:    best/rmse 1.23577
+wandb:   best/score 0.98408
+wandb:        epoch 40
+wandb:  train/depth 0.05357
+wandb:    train/foa 0.02611
+wandb:   train/hist 0.25192
+wandb:     train/kl 0
+wandb:   train/loss 0.13495
+wandb:           +8 ...
+wandb: 
+wandb: 🚀 View run unet_256_soundspaces_BS32_Lr0.001_AdamW_exp47_foa_lr1e3_dw2.0_fw0.1_hw0.1 at: https://wandb.ai/branden/neurips_audio_depth/runs/uikczpp1
+wandb: ⭐️ View project at: https://wandb.ai/branden/neurips_audio_depth
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20260408_130213-uikczpp1/logs
+  Val L:0.5426 ABS:0.4453 RMSE:1.3205 d1:0.5371
+
+Done. Best score:0.9841 RMSE:1.2358 ABS:0.3968

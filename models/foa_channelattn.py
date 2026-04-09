@@ -37,6 +37,28 @@ class SqueezeExcitation(nn.Module):
         return out, attn
 
 
+class FOAConditionedSE(nn.Module):
+    """Squeeze-and-Excitation with optional FOA conditioning."""
+    def __init__(self, channels, cond_dim, reduction=16):
+        super().__init__()
+        mid = max(channels // reduction, 4)
+        self.squeeze = nn.AdaptiveAvgPool2d(1)
+        self.excitation = nn.Sequential(
+            nn.Linear(channels + cond_dim, mid),
+            nn.ReLU(inplace=True),
+            nn.Linear(mid, channels),
+        )
+
+    def forward(self, x, cond=None):
+        B, C, H, W = x.shape
+        s = self.squeeze(x).view(B, C)
+        if cond is not None:
+            s = torch.cat([s, cond], dim=1)
+        e = self.excitation(s)
+        attn = torch.sigmoid(e)
+        return x * attn.view(B, C, 1, 1), attn
+
+
 class FOAChannelAttnGenerator(AudioDepthFOAGenerator):
     """UNet FOA with SE channel attention on bottleneck and decoder skip connections."""
 
@@ -53,12 +75,10 @@ class FOAChannelAttnGenerator(AudioDepthFOAGenerator):
         feat_dim = ngf * 8
         reduction = kwargs.get('se_reduction', 16)
 
-        # SE on bottleneck
-        self.bottleneck_se = SqueezeExcitation(feat_dim, reduction)
+        # FOA-conditioned SE on bottleneck (uses foa_latent as conditioning)
+        self.bottleneck_se = FOAConditionedSE(feat_dim, proj_dim, reduction)
 
-        # SE on each skip connection (encoder features used in decoder)
-        # enc_features has num_downs-1 levels (enc0 + encoders)
-        # Build channel list matching encoder outputs
+        # Regular SE on each skip connection (encoder features, before FOA is computed)
         skip_channels = [ngf]
         in_ch = ngf
         for i in range(1, num_downs - 1):
@@ -76,14 +96,14 @@ class FOAChannelAttnGenerator(AudioDepthFOAGenerator):
         Each attn is sigmoid output in [0,1]. We treat them as Bernoulli
         parameters and compute KL(Bernoulli(attn) || Bernoulli(0.5))
         to encourage diversity (not all on or all off).
+        Returns a scalar (0-dim) tensor.
         """
         total_kl = torch.tensor(0.0, device=attn_list[0].device)
         for attn in attn_list:
-            # KL(Bernoulli(p) || Bernoulli(0.5)) = p*log(2p) + (1-p)*log(2(1-p))
             p = torch.clamp(attn, 1e-6, 1 - 1e-6)
             kl = p * torch.log(2 * p) + (1 - p) * torch.log(2 * (1 - p))
-            total_kl = total_kl + kl.mean()
-        return total_kl / len(attn_list)
+            total_kl = total_kl + kl.mean()  # .mean() is scalar
+        return total_kl / len(attn_list)  # scalar / int = scalar
 
     def forward(self, x, return_hist_maps=False):
         enc_features = []
@@ -94,19 +114,19 @@ class FOAChannelAttnGenerator(AudioDepthFOAGenerator):
             enc_features.append(h)
         bottleneck = self.enc_inner(h)
 
-        # SE on bottleneck
-        all_attns = []
-        bottleneck_se, bn_attn = self.bottleneck_se(bottleneck)
-        all_attns.append(bn_attn)
-
-        # SH branch (from SE-enhanced bottleneck)
-        pooled = self.pool(bottleneck_se)
+        # Compute FOA latent from ORIGINAL bottleneck (before SE)
+        pooled = self.pool(bottleneck)
         foa_latent = self.audio_proj(pooled)
         pred_foa = self.foa_head(foa_latent)
         pred_hoa = self.hoa_head(foa_latent)
         pred_sh = torch.cat([pred_foa, pred_hoa], dim=1)
 
-        # Apply SE to skip connections
+        # Now apply FOA-conditioned SE on bottleneck for decoding
+        all_attns = []
+        bottleneck_se, bn_attn = self.bottleneck_se(bottleneck, cond=foa_latent)
+        all_attns.append(bn_attn)
+
+        # Apply regular SE to skip connections
         se_enc_features = []
         for feat, se in zip(enc_features, self.skip_se):
             se_feat, se_attn = se(feat)

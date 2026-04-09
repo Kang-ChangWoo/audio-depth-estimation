@@ -35,8 +35,8 @@ class CrossAttentionBridge(nn.Module):
         """
         B, D, H, W = key_value.shape
         # Flatten spatial dims for KV
-        kv = key_value.view(B, D, H * W).permute(0, 2, 1)  # (B, HW, D)
-        q = query.unsqueeze(1)  # (B, 1, D)
+        kv = key_value.view(B, D, H * W).permute(0, 2, 1).contiguous()  # (B, HW, D)
+        q = query.unsqueeze(1).contiguous()  # (B, 1, D)
 
         q = self.norm_q(q)
         kv = self.norm_kv(kv)
@@ -55,6 +55,25 @@ class CrossAttentionBridge(nn.Module):
         out = self.out_proj(out).squeeze(1)  # (B, D)
 
         return out, attn_weights.squeeze(2)  # (B, heads, HW)
+
+
+class FiLMConditioner(nn.Module):
+    """Modulate spatial features using a conditioning vector."""
+    def __init__(self, cond_dim, feat_channels):
+        super().__init__()
+        self.proj = nn.Linear(cond_dim, feat_channels * 2)
+        # Initialize near identity: gamma≈1, beta≈0
+        nn.init.zeros_(self.proj.weight)
+        nn.init.zeros_(self.proj.bias)
+        nn.init.ones_(self.proj.bias[:feat_channels])
+
+    def forward(self, feat, cond):
+        """feat: (B, C, H, W), cond: (B, cond_dim)"""
+        params = self.proj(cond)  # (B, 2C)
+        gamma, beta = params.chunk(2, dim=1)
+        gamma = gamma.unsqueeze(-1).unsqueeze(-1)  # (B, C, 1, 1)
+        beta = beta.unsqueeze(-1).unsqueeze(-1)
+        return gamma * feat + beta
 
 
 class FOACrossAttnGenerator(AudioDepthFOAGenerator):
@@ -82,9 +101,13 @@ class FOACrossAttnGenerator(AudioDepthFOAGenerator):
         self.mu_head = nn.Linear(proj_dim, proj_dim)
         self.logvar_head = nn.Linear(proj_dim, proj_dim)
 
+        # FiLM conditioning: inject FOA latent into decoder
+        self.film = FiLMConditioner(proj_dim, feat_dim)
+
     def _kl_divergence(self, mu, logvar):
-        """KL(N(mu, sigma) || N(0,1))"""
-        return -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+        """KL(N(mu, sigma) || N(0,1)). Returns a scalar tensor."""
+        kl = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp())
+        return kl.mean()  # guaranteed 0-dim scalar
 
     def _reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -124,9 +147,10 @@ class FOACrossAttnGenerator(AudioDepthFOAGenerator):
         pred_hoa = self.hoa_head(foa_latent)
         pred_sh = torch.cat([pred_foa, pred_hoa], dim=1)
 
-        # Decode
+        # Decode with FiLM conditioning from FOA latent
         enc_reversed = enc_features[::-1]
         h = self.decoders[0](bottleneck)
+        h = self.film(h, foa_latent)  # FOA cue injected into decoder
         for i in range(len(self.decoders) - 1):
             h = torch.cat([enc_reversed[i], h], dim=1)
             h = self.decoders[i + 1](h)

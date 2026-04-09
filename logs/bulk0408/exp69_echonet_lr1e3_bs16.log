@@ -19,3 +19,27 @@ Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
 [val] 2951 samples from 9 scenes (filtered 592 with >10% no-depth)
 Train: 23560, Val: 2951
 Model: echonet (321.3M params)
+Epoch [1/40] L:0.2385 D:0.2385 5442s
+Epoch [2/40] L:0.2227 D:0.2227 5445s
+Epoch [3/40] L:0.2151 D:0.2151 5441s
+Epoch [4/40] L:0.2094 D:0.2094 5437s
+  Val L:9.2579 ABS:0.8060 RMSE:1.9023 d1:0.1914
+  >> Best (score:1.5734 RMSE:1.9023 ABS:0.8060)
+Epoch [5/40] L:0.2042 D:0.2042 5441s
+Epoch [6/40] L:0.1937 D:0.1937 5442s
+Epoch [7/40] L:0.1869 D:0.1869 5441s
+Epoch [8/40] L:0.1821 D:0.1821 5457s
+  Val L:10.6500 ABS:0.7139 RMSE:1.8607 d1:0.2263
+  >> Best (score:1.5167 RMSE:1.8607 ABS:0.7139)
+Epoch [9/40] L:0.1781 D:0.1781 5450s
+Epoch [10/40] L:0.1732 D:0.1732 5449s
+Epoch [11/40] L:0.1689 D:0.1689 5448s
+Epoch [12/40] L:0.1653 D:0.1653 5448s
+  Val L:8.3936 ABS:0.5872 RMSE:1.6544 d1:0.3203
+  >> Best (score:1.3343 RMSE:1.6544 ABS:0.5872)
+Epoch [13/40] L:0.1609 D:0.1609 5447s
+Epoch [14/40] L:0.1567 D:0.1567 5448s
+Epoch [15/40] L:0.1529 D:0.1529 5447s
+Epoch [16/40] L:0.1497 D:0.1497 5449s
+  Val L:4.4245 ABS:0.5859 RMSE:1.6685 d1:0.3068
+Epoch [17/40] L:0.1455 D:0.1455 5446s

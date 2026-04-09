@@ -4,6 +4,7 @@ from .foa_crossattn import FOACrossAttnGenerator
 from .foa_featbank import FOAFeatBankGenerator
 from .foa_msattn import FOAMultiScaleAttnGenerator
 from .foa_channelattn import FOAChannelAttnGenerator
+from .foa_v2 import FOAv2Generator
 from .echodiffusion import EchoDiffusion
 from .echonet import EchoNet
 from .batvision import BatVisionUNet
