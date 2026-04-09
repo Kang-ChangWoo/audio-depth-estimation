@@ -2,6 +2,7 @@
 
 import json
 import os
+import warnings
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -9,7 +10,9 @@ from torch.utils.data import Dataset
 import torchaudio
 import torchaudio.transforms as T
 
-from .sh_basis import sh_basis_matrix, reconstruct_per_component_maps
+warnings.filterwarnings("ignore", message=".*torchaudio.*torchcodec.*", category=UserWarning)
+
+from .sh_basis import sh_basis_matrix, compute_covariance, energy_map_from_cov
 
 SPLIT_FILENAME = 'scene_split.json'
 
@@ -66,13 +69,40 @@ class SoundSpacesDataset(Dataset):
         self.max_depth = cfg.dataset.max_depth
         self.min_depth = cfg.dataset.min_depth
         self.use_ambisonic = getattr(cfg.dataset, 'use_ambisonic', False)
+        self.use_waveform = getattr(cfg.dataset, 'use_waveform', False)
 
         scene_split = get_scene_split(
             self.root_dir, cfg.dataset.split_ratio, seed=cfg.dataset.split_seed)
         self.scenes = scene_split[split]
 
-        self.samples = []
+        self.samples = self._build_sample_list(split)
+
+        if self.use_ambisonic:
+            h, w = cfg.dataset.images_size
+            h, w = int(h), int(w)
+            jj, ii = np.meshgrid(np.arange(w), np.arange(h))
+            az_grid = (jj + 0.5) / w * 2 * np.pi - np.pi
+            el_grid = np.pi / 2 - (ii + 0.5) / h * np.pi
+            self._sh_basis = sh_basis_matrix(1, el_grid, az_grid)
+            self._erp_shape = (h, w)
+            self._sh_n_ch = 4
+            print(f"  Precomputed SH basis matrix: {self._sh_basis.shape} (order=1)")
+
+    def _build_sample_list(self, split):
+        """Build sample list with cached depth-validity filter."""
+        cache_path = os.path.join(self.root_dir, f'sample_cache_{self.depth_type}.json')
+
+        # Load or build validity cache
+        if os.path.exists(cache_path):
+            with open(cache_path, 'r') as f:
+                valid_cache = json.load(f)
+        else:
+            valid_cache = {}
+
+        samples = []
         skipped = 0
+        cache_dirty = False
+
         for scene in self.scenes:
             audio_dir = os.path.join(self.root_dir, scene, 'audio_wav')
             depth_dir = os.path.join(self.root_dir, scene, f'{self.depth_type}_depth')
@@ -94,26 +124,31 @@ class SoundSpacesDataset(Dataset):
                     ambi_path = os.path.join(self.root_dir, scene, 'ambi1_npy', f'ambi1_{idx}.npy')
                     if not os.path.exists(ambi_path):
                         continue
-                depth = np.load(depth_path).astype(np.float32)
-                if np.mean(depth <= 0) > 0.1:
+
+                cache_key = f'{scene}/{idx}'
+                if cache_key in valid_cache:
+                    is_valid = valid_cache[cache_key]
+                else:
+                    depth = np.load(depth_path).astype(np.float32)
+                    is_valid = bool(np.mean(depth <= 0) <= 0.1)
+                    valid_cache[cache_key] = is_valid
+                    cache_dirty = True
+
+                if not is_valid:
                     skipped += 1
                     continue
-                self.samples.append((scene, idx))
+                samples.append((scene, idx))
 
-        print(f"[{split}] {len(self.samples)} samples from {len(self.scenes)} scenes "
+        if cache_dirty:
+            with open(cache_path, 'w') as f:
+                json.dump(valid_cache, f)
+            print(f"  Saved sample cache: {cache_path}")
+
+        print(f"[{split}] {len(samples)} samples from {len(self.scenes)} scenes "
               f"(filtered {skipped} with >10% no-depth)"
-              f"{' [ambisonic=ON]' if self.use_ambisonic else ''}")
-
-        if self.use_ambisonic:
-            h, w = cfg.dataset.images_size
-            h, w = int(h), int(w)
-            jj, ii = np.meshgrid(np.arange(w), np.arange(h))
-            az_grid = (jj + 0.5) / w * 2 * np.pi - np.pi
-            el_grid = np.pi / 2 - (ii + 0.5) / h * np.pi
-            self._sh_basis = sh_basis_matrix(1, el_grid, az_grid)
-            self._erp_shape = (h, w)
-            self._sh_n_ch = 4
-            print(f"  Precomputed SH basis matrix: {self._sh_basis.shape} (order=1)")
+              f"{' [ambisonic=ON]' if self.use_ambisonic else ''}"
+              f"{' [waveform=ON]' if self.use_waveform else ''}")
+        return samples
 
     def __len__(self):
         return len(self.samples)
@@ -158,19 +193,40 @@ class SoundSpacesDataset(Dataset):
         if self.cfg.dataset.depth_norm:
             gt_depth = gt_depth / self.max_depth
 
+        if self.use_waveform:
+            # Pad/truncate waveform to fixed length for batching
+            wave_len = getattr(self.cfg.dataset, 'waveform_len', 960)
+            if waveform.shape[1] < wave_len:
+                waveform = F.pad(waveform, (0, wave_len - waveform.shape[1]))
+            else:
+                waveform = waveform[:, :wave_len]
+            return (audio.contiguous(), gt_depth.contiguous(),
+                    waveform.contiguous())
+
         if self.use_ambisonic:
             ambi_path = os.path.join(
                 self.root_dir, scene, 'ambi1_npy', f'ambi1_{sample_idx}.npy')
-            sh_coeffs = np.load(ambi_path).astype(np.float64)
+            ir = np.load(ambi_path).astype(np.float64)
             h, w = self._erp_shape
-            component_maps = reconstruct_per_component_maps(sh_coeffs, self._sh_basis)
-            component_maps = component_maps.reshape(4, h, w).astype(np.float32)
-            for ch in range(4):
-                cmax = np.abs(component_maps[ch]).max()
-                if cmax > 0:
-                    component_maps[ch] = component_maps[ch] / cmax
-            ambi_erp = torch.from_numpy(component_maps)
-            return audio.contiguous(), gt_depth.contiguous(), ambi_erp.contiguous()
+            n_ch = self._sh_n_ch
+
+            # FOA target: channel RMS from IR -> (4,)
+            rms = np.sqrt(np.mean(ir[:n_ch] ** 2, axis=1)).astype(np.float32)
+            rms_max = np.abs(rms).max()
+            if rms_max > 0:
+                rms = rms / rms_max
+            foa_target = torch.from_numpy(rms)
+
+            # Covariance-based energy map -> (1, H, W)
+            R = compute_covariance(ir[:n_ch])
+            energy = energy_map_from_cov(R, self._sh_basis, h, w).astype(np.float32)
+            emax = np.abs(energy).max()
+            if emax > 0:
+                energy = energy / emax
+            energy_map = torch.from_numpy(energy).unsqueeze(0)
+
+            return (audio.contiguous(), gt_depth.contiguous(),
+                    foa_target.contiguous(), energy_map.contiguous())
 
         return audio.contiguous(), gt_depth.contiguous()
 

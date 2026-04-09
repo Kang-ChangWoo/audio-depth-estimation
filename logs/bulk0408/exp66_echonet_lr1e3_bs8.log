@@ -1,0 +1,24 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from WANDB_API_KEY.
+wandb: Currently logged in as: branden to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run y1z0wow4
+wandb: Tracking run with wandb version 0.25.1
+wandb: Run data is saved locally in /root/storage/implementation/shared_audio/baseline/wandb/run-20260407_235338-y1z0wow4
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run echonet_soundspaces_BS8_Lr0.001_AdamW_exp66_echonet_lr1e3_bs8
+wandb: ⭐️ View project at https://wandb.ai/branden/neurips_audio_depth
+wandb: 🚀 View run at https://wandb.ai/branden/neurips_audio_depth/runs/y1z0wow4
+============================================================
+Model: echonet  Dataset: soundspaces
+BS: 8  LR: 0.001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples from 72 scenes (filtered 5240 with >10% no-depth)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples from 9 scenes (filtered 592 with >10% no-depth)
+Train: 23560, Val: 2951
+Model: echonet (321.3M params)
+Epoch [1/40] L:0.2436 D:0.2436 6639s
+Epoch [2/40] L:0.2292 D:0.2292 6636s
+Epoch [3/40] L:0.2250 D:0.2250 6636s
