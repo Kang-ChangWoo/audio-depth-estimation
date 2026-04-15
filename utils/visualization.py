@@ -94,3 +94,71 @@ def save_batch_visualization(pred_depths, gt_depths, save_path, epoch, num_sampl
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
+
+
+def save_depth_image(depth, save_path, vmin=0, vmax=None, cmap='plasma', title=None):
+    """Save a single depth map as a clean image with colorbar."""
+    if isinstance(depth, torch.Tensor):
+        depth = depth.detach().cpu().numpy()
+    if depth.ndim == 3:
+        depth = depth[0]
+    if vmax is None:
+        valid = depth[depth > 0]
+        vmax = valid.max() if len(valid) > 0 else 1.0
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    im = ax.imshow(depth, cmap=cmap, vmin=vmin, vmax=vmax)
+    if title:
+        ax.set_title(title, fontsize=12)
+    ax.axis('off')
+    plt.colorbar(im, ax=ax, fraction=0.02, pad=0.02)
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.close()
+
+
+def save_test_visualizations(pred_depth, gt_depth, save_dir, sample_name, epoch):
+    """Save merged (5-row) + separate GT/Pred depth images.
+
+    Outputs:
+        {save_dir}/merged/{sample_name}.png   -- full 5-row visualization
+        {save_dir}/gt_depth/{sample_name}.png  -- GT depth only
+        {save_dir}/pred_depth/{sample_name}.png -- predicted depth only
+    """
+    if isinstance(pred_depth, torch.Tensor):
+        pred_depth = pred_depth.detach().cpu().numpy()
+    if isinstance(gt_depth, torch.Tensor):
+        gt_depth = gt_depth.detach().cpu().numpy()
+    if pred_depth.ndim == 4:
+        pred_depth = pred_depth[0]
+    if gt_depth.ndim == 4:
+        gt_depth = gt_depth[0]
+    if pred_depth.ndim == 3:
+        pred_depth = pred_depth[0]
+    if gt_depth.ndim == 3:
+        gt_depth = gt_depth[0]
+
+    valid_mask = gt_depth > 0
+    vmax = gt_depth[valid_mask].max() if valid_mask.any() else 1.0
+
+    # ── Merged (5-row) ──
+    merged_dir = os.path.join(save_dir, 'merged')
+    os.makedirs(merged_dir, exist_ok=True)
+    merged_path = os.path.join(merged_dir, f'{sample_name}.png')
+    # reuse save_batch_visualization with single sample
+    save_batch_visualization(
+        pred_depth[np.newaxis, np.newaxis],
+        gt_depth[np.newaxis, np.newaxis],
+        merged_path, epoch, num_samples=1)
+
+    # ── Separate GT depth ──
+    gt_dir = os.path.join(save_dir, 'gt_depth')
+    os.makedirs(gt_dir, exist_ok=True)
+    save_depth_image(gt_depth, os.path.join(gt_dir, f'{sample_name}.png'),
+                     vmax=vmax, title='GT Depth')
+
+    # ── Separate Pred depth ──
+    pred_dir = os.path.join(save_dir, 'pred_depth')
+    os.makedirs(pred_dir, exist_ok=True)
+    save_depth_image(pred_depth, os.path.join(pred_dir, f'{sample_name}.png'),
+                     vmax=vmax, title='Pred Depth')

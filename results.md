@@ -1,172 +1,220 @@
-# Experiment Results
+# Experiment Results (Evaluation Metrics)
 
-## Summary
+All eval metrics below are from the **test split** (9 scenes, 3192 samples) via `bulk0410`. Training completion tracked from `bulk0407`/`bulk0408`/`bulk0410_failedexps` logs.
 
-- **bulk0407**: 50 experiments (15 DONE, 3 PARTIAL, 12 NO_RESULT/FAILED, 20 FOA-variant FAILED)
-- **bulk0408**: 15 experiments (10 DONE, 4 PARTIAL, 1 CRASHED)
-
-Best model selection: `score = 0.7 × RMSE + 0.3 × abs_rel` (lower is better)
+Best model selection during training: `score = 0.7 × RMSE + 0.3 × ABS_REL` (lower is better)
 
 ---
 
-## bulk0407 — Completed Experiments
+## Training Status After bulk0407+bulk0408+bulk0410_failedexps (as of 2026-04-14)
 
-### Baseline UNet (5/5 done)
+**119 / 130 experiments have `best_model.pth`** (verified 2026-04-14 by counting `checkpoints/*/best_model.pth`). 41 new experiments trained since the bulk0410 test run (exp70–exp125 range) and are **awaiting evaluation** via `scripts/bulk0414_test_120exps_revised.sh`. The re-run `bulk0410_failedexps.sh` successfully produced the missing FOA v2 and EchoDiff+Wav2Vec checkpoints (exp57, 59, 60, 121, 123, 125).
 
-| Exp | Name | LR | BS | RMSE | ABS_REL | Score |
-|-----|------|----|----|------|---------|-------|
-| 01 | exp01_baseline_lr1e3_bs32 | 1e-3 | 32 | 1.2396 | 0.4026 | 0.9885 |
-| 02 | exp02_baseline_lr5e4_bs32 | 5e-4 | 32 | 1.2535 | 0.3829 | 0.9923 |
-| 03 | exp03_baseline_lr1e4_bs32 | 1e-4 | 32 | 1.2631 | 0.4017 | 1.0047 |
-| 04 | exp04_baseline_lr1e3_bs16 | 1e-3 | 16 | 1.2680 | 0.3815 | 1.0020 |
-| 05 | exp05_baseline_lr5e4_bs16 | 5e-4 | 16 | 1.2443 | 0.4310 | 1.0003 |
+### Still Missing (11 experiments never completed training)
 
-**Best**: exp01 (score=0.9885, RMSE=1.2396, lr=1e-3, bs=32)
+All 11 are from `bulk0408_65exps.sh` — training was killed before reaching them. `exp78` started but only reached epoch 4 before being killed; the other 10 have no logs at all.
 
-### ViT (5/5 done)
+| Exp | Config | Name |
+|-----|--------|------|
+| 78  | foa_crossattn   | exp78_crossattn_lr1e3_fw0.05_kl0.01 |
+| 82  | foa_featbank    | exp82_featbank_lr5e4_fw0.2_kl0.005 |
+| 86  | foa_msattn      | exp86_msattn_lr1e3_fw0.1_kl0.02 |
+| 90  | foa_msattn      | exp90_msattn_lr1e3_fw0.3_kl0.01 |
+| 94  | foa_channelattn | exp94_channelattn_lr5e4_fw0.1_hw0.2_kl0.01 |
+| 98  | foa             | exp98_foa_lr7e4_dw1.0_fw0.1_hw0.1 |
+| 102 | foa             | exp102_foa_lr5e4_dw1.5_fw0.1_hw0.1 |
+| 106 | foa             | exp106_foa_lr1e3_fw0.1_hw0.3 |
+| 110 | foa             | exp110_foa_lr5e4_fw0.2_hw0.1_freeze5 |
+| 114 | foa             | exp114_foa_lr5e4_dw0.5_fw0.1_hw0.2 |
+| 118 | foa             | exp118_foa_lr7e4_fw0.15_hw0.15 |
 
-| Exp | Name | LR | BS | RMSE | ABS_REL | Score |
-|-----|------|----|----|------|---------|-------|
-| 06 | exp06_vit_lr1e4_bs32 | 1e-4 | 32 | 1.2612 | 0.4412 | 1.0152 |
-| 07 | exp07_vit_lr5e5_bs32 | 5e-5 | 32 | 1.2684 | 0.4312 | 1.0172 |
-| 08 | exp08_vit_lr1e4_bs16 | 1e-4 | 16 | 1.2424 | 0.4566 | 1.0067 |
-| 09 | exp09_vit_lr5e4_bs32 | 5e-4 | 32 | 1.3828 | 0.5275 | 1.1262 |
-| 10 | exp10_vit_lr1e5_bs32 | 1e-5 | 32 | 1.3164 | 0.4410 | 1.0538 |
+### Newly Trained, Awaiting Test (41 experiments)
 
-**Best**: exp08 (score=1.0067, RMSE=1.2424, lr=1e-4, bs=16)
+These now have `best_model.pth` but have not yet been evaluated. The new test script `scripts/bulk0414_test_120exps_revised.sh` covers them along with a re-test of previously evaluated models (auto-discovery).
 
-### EchoDiffusion (5/5 done)
-
-| Exp | Name | LR | BS | RMSE | ABS_REL | Score |
-|-----|------|----|----|------|---------|-------|
-| 11 | exp11_echodiff_lr1e4_bs32 | 1e-4 | 32 | 1.2784 | 0.3815 | 1.0093 |
-| 12 | exp12_echodiff_lr5e5_bs32 | 5e-5 | 32 | 1.2645 | 0.4309 | 1.0144 |
-| 13 | exp13_echodiff_lr1e4_bs16 | 1e-4 | 16 | 1.2559 | 0.4038 | 1.0003 |
-| 14 | exp14_echodiff_lr5e4_bs32 | 5e-4 | 32 | 1.2372 | 0.4096 | 0.9889 |
-| 15 | exp15_echodiff_lr1e5_bs32 | 1e-5 | 32 | 1.2823 | 0.4282 | 1.0261 |
-
-**Best**: exp14 (score=0.9889, RMSE=1.2372, lr=5e-4, bs=32)
-
-### FOA Variants (all 20 FAILED)
-
-Experiments 16-35 (crossattn, featbank, msattn, channelattn) all failed due to model errors.
-
-### FOA Original — Hyperparameter Tuning
-
-| Exp | Name | LR | BS | dw | fw | hw | Freeze | RMSE | ABS_REL | Score | Status |
-|-----|------|----|----|----|----|-------|--------|------|---------|-------|--------|
-| 36 | exp36_foa_lr1e3_dw1.0_fw0.1_hw0.1 | 1e-3 | 32 | 1.0 | 0.1 | 0.1 | 0 | 1.2257 | 0.4386 | 0.9896 | DONE |
-| 37 | exp37_foa_lr5e4_dw1.0_fw0.1_hw0.1 | 5e-4 | 32 | 1.0 | 0.1 | 0.1 | 0 | 1.2283 | 0.4068 | 0.9819 | DONE |
-| 38 | exp38_foa_lr1e4_dw1.0_fw0.1_hw0.1 | 1e-4 | 32 | 1.0 | 0.1 | 0.1 | 0 | 1.2416 | 0.3993 | 0.9889 | PARTIAL |
-| 39 | exp39_foa_lr1e3_bs16_dw1.0_fw0.1_hw0.1 | 1e-3 | 16 | 1.0 | 0.1 | 0.1 | 0 | 1.2321 | 0.4411 | 0.9948 | DONE |
-| 40 | exp40_foa_lr5e4_bs16_dw1.0_fw0.1_hw0.1 | 5e-4 | 16 | 1.0 | 0.1 | 0.1 | 0 | 1.2223 | 0.4153 | **0.9802** | DONE |
-| 41 | exp41_foa_lr1e3_dw1.0_fw0.2_hw0.1 | 1e-3 | 32 | 1.0 | 0.2 | 0.1 | 0 | 1.2362 | 0.4037 | 0.9865 | DONE |
-| 42 | exp42_foa_lr5e4_dw1.0_fw0.2_hw0.1 | 5e-4 | 32 | 1.0 | 0.2 | 0.1 | 0 | 1.2384 | 0.3981 | 0.9863 | DONE |
-| 44 | exp44_foa_lr5e4_dw1.0_fw0.1_hw0.2 | 5e-4 | 32 | 1.0 | 0.1 | 0.2 | 0 | 1.2442 | 0.4108 | 0.9942 | DONE |
-| 45 | exp45_foa_lr1e3_dw1.0_fw0.2_hw0.2 | 1e-3 | 32 | 1.0 | 0.2 | 0.2 | 0 | 1.2237 | 0.4375 | 0.9878 | DONE |
-| 46 | exp46_foa_lr1e3_dw0.5_fw0.1_hw0.1 | 1e-3 | 32 | 0.5 | 0.1 | 0.1 | 0 | 1.2377 | 0.4252 | 0.9939 | DONE |
-| 47 | exp47_foa_lr1e3_dw2.0_fw0.1_hw0.1 | 1e-3 | 32 | 2.0 | 0.1 | 0.1 | 0 | 1.2358 | 0.3968 | 0.9841 | DONE |
-| 49 | exp49_foa_lr1e3_dw1.0_fw0.1_hw0.05 | 1e-3 | 32 | 1.0 | 0.1 | 0.05 | 0 | 1.2354 | 0.4180 | 0.9902 | PARTIAL |
-| 50 | exp50_foa_lr1e3_dw1.0_fw0.1_hw0.1_freeze5 | 1e-3 | 32 | 1.0 | 0.1 | 0.1 | 5 | 1.2322 | 0.4305 | 0.9917 | PARTIAL |
-| 51 | exp51_foa_lr1e3_dw1.0_fw0.1_hw0.1_freeze10 | 1e-3 | 32 | 1.0 | 0.1 | 0.1 | 10 | - | - | - | FAILED |
-| 52 | exp52_foa_lr5e4_dw1.0_fw0.2_hw0.2 | 5e-4 | 32 | 1.0 | 0.2 | 0.2 | 0 | - | - | - | FAILED |
-
-Missing: exp43, exp48, exp53, exp54, exp55 (not found in logs)
-
-**Best FOA**: exp40 (score=**0.9802**, RMSE=1.2223, lr=5e-4, bs=16, dw=1.0, fw=0.1, hw=0.1)
+| Group | Count | Exps |
+|-------|-------|------|
+| EchoNet       | 1  | exp70 |
+| BatVision     | 5  | exp71–exp75 |
+| FOA CrossAttn+KL  | 4  | exp76, 77, 79, 80 |
+| FOA FeatBank+KL   | 4  | exp81, 83, 84, 85 |
+| FOA MSAttn+KL     | 3  | exp87, 88, 89 |
+| FOA ChannelAttn+KL| 4  | exp91, 92, 93, 95 |
+| FOA (wider search)| 19 | exp96, 97, 99, 100, 101, 103, 104, 105, 107, 108, 109, 111, 112, 113, 115, 116, 117, 119, 120 |
+| EchoDiff+Wav2Vec  | 1  | exp125 |
 
 ---
 
-## bulk0408 — Completed Experiments
+---
 
-### Pretrained ResNet-50 (5/5 done)
+## Baseline UNet (5/5 train DONE, 5/5 eval OK)
 
-| Exp | Name | LR | BS | RMSE | ABS_REL | Score |
-|-----|------|----|----|------|---------|-------|
-| 56 | exp56_resnet_lr1e4_bs32 | 1e-4 | 32 | 1.3391 | 0.4709 | 1.0786 |
-| 57 | exp57_resnet_lr5e5_bs32 | 5e-5 | 32 | 1.3273 | 0.4801 | 1.0731 |
-| 58 | exp58_resnet_lr5e4_bs32 | 5e-4 | 32 | 1.3557 | 0.4507 | 1.0842 |
-| 59 | exp59_resnet_lr1e4_bs16 | 1e-4 | 16 | 1.3187 | 0.5124 | 1.0768 |
-| 60 | exp60_resnet_lr3e4_bs32 | 3e-4 | 32 | 1.3238 | 0.4729 | 1.0685 |
+| Exp | LR | BS | ABS_REL | RMSE | δ<1.25 | δ<1.25² | δ<1.25³ | Log10 | MAE |
+|-----|----|-----|---------|------|--------|---------|---------|-------|-----|
+| 01 | 1e-3 | 32 | 0.4553 | **1.0817** | **0.5031** | **0.7149** | **0.8329** | **0.1548** | **0.6714** |
+| 02 | 5e-4 | 32 | **0.4127** | 1.0989 | 0.4943 | 0.7086 | 0.8282 | 0.1566 | 0.6738 |
+| 03 | 1e-4 | 32 | 0.4295 | 1.0894 | 0.4934 | 0.7079 | 0.8314 | 0.1557 | 0.6738 |
+| 04 | 1e-3 | 16 | 0.4300 | 1.1076 | 0.4882 | 0.7039 | 0.8287 | 0.1573 | 0.6814 |
+| 05 | 5e-4 | 16 | 0.4688 | 1.0927 | 0.4863 | 0.7013 | 0.8243 | 0.1588 | 0.6835 |
 
-**Best**: exp60 (score=1.0685, RMSE=1.3238, lr=3e-4, bs=32)
+**Best by eval RMSE**: exp01 (1.0817)
 
-### Pretrained ViT-B/16 (5/5 done)
+## AudioDepthViT (5/5 train DONE, 5/5 eval OK)
 
-| Exp | Name | LR | BS | RMSE | ABS_REL | Score |
-|-----|------|----|----|------|---------|-------|
-| 61 | exp61_vit_lr1e4_bs16 | 1e-4 | 16 | 1.2434 | 0.3903 | 0.9875 |
-| 62 | exp62_vit_lr5e5_bs16 | 5e-5 | 16 | 1.2350 | 0.3909 | 0.9818 |
-| 63 | exp63_vit_lr5e4_bs16 | 5e-4 | 16 | 1.2674 | 0.4147 | 1.0116 |
-| 64 | exp64_vit_lr1e4_bs8 | 1e-4 | 8 | 1.2432 | 0.4166 | 0.9953 |
-| 65 | exp65_vit_lr3e5_bs16 | 3e-5 | 16 | 1.2397 | 0.4053 | 0.9894 |
+| Exp | LR | BS | ABS_REL | RMSE | δ<1.25 | δ<1.25² | δ<1.25³ | Log10 | MAE |
+|-----|----|-----|---------|------|--------|---------|---------|-------|-----|
+| 06 | 1e-4 | 32 | 0.4770 | 1.1265 | 0.4705 | 0.6855 | 0.8143 | 0.1654 | 0.7096 |
+| 07 | 5e-5 | 32 | 0.4755 | 1.1174 | 0.4731 | 0.6897 | 0.8173 | 0.1640 | 0.7022 |
+| 08 | 1e-4 | 16 | 0.5163 | **1.1055** | **0.4805** | 0.6933 | 0.8163 | 0.1644 | 0.7018 |
+| 09 | 5e-4 | 32 | 0.5593 | 1.1985 | 0.4443 | 0.6524 | 0.7839 | 0.1804 | 0.7629 |
+| 10 | 1e-5 | 32 | **0.4720** | 1.1170 | 0.4812 | **0.6959** | **0.8194** | **0.1627** | **0.6983** |
 
-**Best**: exp62 (score=**0.9818**, RMSE=1.2350, lr=5e-5, bs=16)
+**Best by eval RMSE**: exp08 (1.1055)
 
-### Echo-Net / Parida (4/4 partial — runs killed before 40 epochs)
+## EchoDiffusion (5/5 train DONE, 5/5 eval OK)
 
-| Exp | Name | LR | BS | RMSE | ABS_REL | Score | Last Epoch | Status |
-|-----|------|----|----|------|---------|-------|------------|--------|
-| 66 | exp66_echonet_lr1e3_bs8 | 1e-3 | 8 | 1.2886 | 0.5440 | 1.0652 | 16/40 | PARTIAL |
-| 67 | exp67_echonet_lr5e4_bs16 | 5e-4 | 16 | 1.9231 | 1.0187 | 1.6518 | 20/40 | PARTIAL |
-| 68 | exp68_echonet_lr1e4_bs16 | 1e-4 | 16 | 1.8267 | 0.5881 | 1.4551 | 18/40 | PARTIAL |
-| 69 | exp69_echonet_lr1e3_bs16 | 1e-3 | 16 | 1.6544 | 0.5872 | 1.3343 | 17/40 | PARTIAL |
+| Exp | LR | BS | ABS_REL | RMSE | δ<1.25 | δ<1.25² | δ<1.25³ | Log10 | MAE |
+|-----|----|-----|---------|------|--------|---------|---------|-------|-----|
+| 11 | 1e-4 | 32 | **0.4300** | 1.1060 | 0.4876 | 0.7049 | 0.8296 | 0.1577 | 0.6810 |
+| 12 | 5e-5 | 32 | 0.4914 | 1.1208 | 0.4816 | 0.6980 | 0.8197 | 0.1635 | 0.7023 |
+| 13 | 1e-4 | 16 | 0.4504 | 1.1134 | 0.4930 | 0.7088 | 0.8291 | 0.1605 | 0.6885 |
+| 14 | 5e-4 | 32 | 0.4664 | **1.0908** | **0.4932** | 0.7061 | 0.8272 | 0.1578 | 0.6829 |
+| 15 | 1e-5 | 32 | 0.4708 | 1.1300 | 0.4728 | 0.6877 | 0.8164 | 0.1655 | 0.7102 |
 
-**Best (so far)**: exp66 (score=1.0652, RMSE=1.2886, lr=1e-3, bs=8) — still PARTIAL, full 40-epoch run pending.
+**Best by eval RMSE**: exp14 (1.0908)
 
-### EchoDiffusion + Wav2Vec (1 crashed)
+## EchoDiffusion + Wav2Vec (4/4 train DONE, 4/4 eval OK)
 
-| Exp | Name | LR | BS | RMSE | ABS_REL | Score | Status |
-|-----|------|----|----|------|---------|-------|--------|
-| 121 | exp121_echodiff_wav2vec_lr1e4_bs16 | 1e-4 | 16 | - | - | - | CRASHED (epoch 20) |
+| Exp | LR | BS | ABS_REL | RMSE | δ<1.25 | δ<1.25² | δ<1.25³ | Log10 | MAE |
+|-----|----|-----|---------|------|--------|---------|---------|-------|-----|
+| 121 | 1e-4 | 16 | 0.4485 | **1.0892** | 0.4887 | **0.7075** | **0.8304** | **0.1565** | **0.6740** |
+| 122 | 5e-4 | 16 | 0.4585 | 1.0958 | 0.4882 | 0.7017 | 0.8267 | 0.1582 | 0.6835 |
+| 123 | 1e-4 | 32 | **0.4214** | 1.1062 | **0.4884** | 0.7067 | 0.8314 | 0.1574 | 0.6785 |
+| 124 | 5e-5 | 16 | 0.4901 | 1.0958 | 0.4721 | 0.6934 | 0.8192 | 0.1632 | 0.6955 |
+
+**Best by eval RMSE**: exp121 (1.0892)
+
+## FOA CrossAttn (5/5 train DONE, 0/5 eval OK — all EVAL_FAIL)
+
+Training completed for all 5 experiments (exp16–20), but evaluation failed to load checkpoints.
+
+## FOA FeatBank (5/5 train DONE, 0/5 eval OK — all EVAL_FAIL)
+
+Training completed for all 5 experiments (exp21–25), but evaluation failed to load checkpoints.
+
+## FOA MSAttn (5/5 train DONE, 0/5 eval OK — all EVAL_FAIL)
+
+Training completed for all 5 experiments (exp26–30), but evaluation failed to load checkpoints.
+
+## FOA ChannelAttn (5/5 train DONE, 0/5 eval OK — all EVAL_FAIL)
+
+Training completed for all 5 experiments (exp31–35), but evaluation failed to load checkpoints.
+
+## FOA v2 (5/5 train DONE, 0/5 eval OK — all EVAL_FAIL)
+
+Training completed for all 5 experiments (exp56–60 foav2), but evaluation failed to load checkpoints.
+
+## FOA Original (20/20 train DONE, 20/20 eval OK)
+
+| Exp | LR | BS | dw | fw | hw | Frz | ABS_REL | RMSE | δ<1.25 | δ<1.25² | δ<1.25³ | Log10 | MAE |
+|-----|----|----|----|----|-----|-----|---------|------|--------|---------|---------|-------|-----|
+| 36 | 1e-3 | 32 | 1.0 | 0.1 | 0.1 | 0 | 0.4850 | 1.0884 | 0.4943 | 0.7108 | 0.8297 | 0.1582 | 0.6867 |
+| 37 | 5e-4 | 32 | 1.0 | 0.1 | 0.1 | 0 | 0.4520 | 1.1102 | 0.4753 | 0.6930 | 0.8220 | 0.1621 | 0.6960 |
+| 38 | 1e-4 | 32 | 1.0 | 0.1 | 0.1 | 0 | 0.4441 | 1.1058 | 0.4878 | 0.7062 | 0.8286 | 0.1587 | 0.6871 |
+| 39 | 1e-3 | 16 | 1.0 | 0.1 | 0.1 | 0 | 0.4953 | 1.0973 | 0.4973 | 0.7113 | 0.8261 | 0.1601 | 0.6912 |
+| 40 | 5e-4 | 16 | 1.0 | 0.1 | 0.1 | 0 | 0.4693 | 1.0888 | 0.4962 | 0.7129 | 0.8316 | 0.1572 | 0.6812 |
+| 41 | 1e-3 | 32 | 1.0 | 0.2 | 0.1 | 0 | 0.4568 | 1.0875 | 0.4900 | 0.7102 | 0.8317 | 0.1567 | 0.6791 |
+| 42 | 5e-4 | 32 | 1.0 | 0.2 | 0.1 | 0 | 0.4572 | 1.0904 | **0.5018** | **0.7145** | 0.8312 | 0.1566 | 0.6782 |
+| 43 | 1e-3 | 32 | 1.0 | 0.1 | 0.2 | 0 | 0.4660 | 1.0972 | 0.4930 | 0.7069 | 0.8247 | 0.1596 | 0.6879 |
+| 44 | 5e-4 | 32 | 1.0 | 0.1 | 0.2 | 0 | 0.4781 | 1.0871 | 0.4986 | 0.7132 | 0.8314 | 0.1571 | 0.6823 |
+| 45 | 1e-3 | 32 | 1.0 | 0.2 | 0.2 | 0 | 0.4955 | 1.0969 | 0.4913 | 0.7067 | 0.8269 | 0.1595 | 0.6936 |
+| 46 | 1e-3 | 32 | 0.5 | 0.1 | 0.1 | 0 | 0.4663 | 1.0977 | 0.4937 | 0.7073 | 0.8268 | 0.1589 | 0.6893 |
+| 47 | 1e-3 | 32 | 2.0 | 0.1 | 0.1 | 0 | **0.4463** | 1.0968 | 0.4858 | 0.7037 | 0.8299 | 0.1578 | 0.6838 |
+| 48 | 1e-3 | 32 | 1.0 | 0.05 | 0.1 | 0 | 0.4625 | 1.0886 | 0.4920 | 0.7081 | 0.8289 | 0.1570 | 0.6821 |
+| 49 | 1e-3 | 32 | 1.0 | 0.1 | 0.05 | 0 | 0.4631 | **1.0803** | 0.5023 | 0.7141 | **0.8323** | **0.1554** | **0.6753** |
+| 50 | 1e-3 | 32 | 1.0 | 0.1 | 0.1 | 5 | 0.4691 | 1.0858 | 0.4860 | 0.7055 | 0.8281 | 0.1579 | 0.6785 |
+| 51 | 1e-3 | 32 | 1.0 | 0.1 | 0.1 | 10 | 0.4839 | 1.0881 | 0.4913 | 0.7098 | 0.8303 | 0.1579 | 0.6834 |
+| 52 | 5e-4 | 32 | 1.0 | 0.2 | 0.2 | 0 | 0.4921 | 1.0814 | 0.4933 | 0.7120 | 0.8306 | 0.1579 | 0.6844 |
+| 53 | 5e-4 | 32 | 0.5 | 0.2 | 0.1 | 0 | 0.4669 | 1.0917 | 0.4878 | 0.7070 | 0.8288 | 0.1581 | 0.6840 |
+| 54 | 1e-4 | 32 | 1.0 | 0.2 | 0.1 | 0 | 0.4716 | 1.1059 | 0.4968 | 0.7149 | 0.8321 | 0.1575 | 0.6856 |
+| 55 | 1e-4 | 16 | 1.0 | 0.1 | 0.1 | 0 | 0.4656 | 1.0945 | 0.4919 | 0.7097 | 0.8310 | 0.1573 | 0.6837 |
+
+**Best by eval RMSE**: exp49 (1.0803, lr=1e-3, dw=1.0, fw=0.1, hw=0.05)
+
+## Pretrained ResNet-50 (5/5 train DONE, 5/5 eval OK)
+
+| Exp | LR | BS | ABS_REL | RMSE | δ<1.25 | δ<1.25² | δ<1.25³ | Log10 | MAE |
+|-----|----|-----|---------|------|--------|---------|---------|-------|-----|
+| 56 | 1e-4 | 32 | 0.5063 | 1.1810 | 0.4402 | 0.6584 | 0.7970 | 0.1768 | 0.7494 |
+| 57 | 5e-5 | 32 | 0.5341 | 1.1506 | **0.4697** | 0.6779 | 0.8024 | 0.1720 | 0.7340 |
+| 58 | 5e-4 | 32 | **0.4929** | 1.2014 | 0.4467 | 0.6479 | 0.7820 | 0.1816 | 0.7586 |
+| 59 | 1e-4 | 16 | 0.5454 | **1.1444** | 0.4480 | 0.6687 | 0.8010 | 0.1733 | 0.7354 |
+| 60 | 3e-4 | 32 | 0.4977 | 1.1515 | 0.4587 | **0.6708** | **0.8015** | **0.1713** | **0.7251** |
+
+**Best by eval RMSE**: exp59 (1.1444)
+
+## Pretrained ViT-B/16 (5/5 train DONE, 5/5 eval OK)
+
+| Exp | LR | BS | ABS_REL | RMSE | δ<1.25 | δ<1.25² | δ<1.25³ | Log10 | MAE |
+|-----|----|-----|---------|------|--------|---------|---------|-------|-----|
+| 61 | 1e-4 | 16 | 0.4496 | 1.0824 | **0.4989** | **0.7124** | 0.8308 | 0.1557 | **0.6720** |
+| 62 | 5e-5 | 16 | 0.4449 | 1.0964 | 0.4869 | 0.7024 | 0.8267 | 0.1582 | 0.6803 |
+| 63 | 5e-4 | 16 | 0.4578 | 1.1168 | 0.4733 | 0.6880 | 0.8177 | 0.1625 | 0.6973 |
+| 64 | 1e-4 | 8 | 0.4654 | 1.1028 | 0.4803 | 0.6958 | 0.8212 | 0.1607 | 0.6909 |
+| 65 | 3e-5 | 16 | **0.4467** | **1.0818** | 0.4959 | 0.7105 | **0.8311** | **0.1557** | 0.6733 |
+
+**Best by eval RMSE**: exp65 (1.0818)
+
+## Echo-Net (4/4 train PARTIAL, 4/4 eval OK)
+
+| Exp | LR | BS | Train | ABS_REL | RMSE | δ<1.25 | δ<1.25² | δ<1.25³ | Log10 | MAE |
+|-----|----|-----|-------|---------|------|--------|---------|---------|-------|-----|
+| 66 | 1e-3 | 8 | 17/40 | **0.4550** | **1.1156** | **0.4778** | **0.6942** | **0.8207** | **0.1620** | **0.6937** |
+| 67 | 5e-4 | 16 | 20/40 | 1.0335 | 1.7018 | 0.2152 | 0.3928 | 0.5465 | 0.2772 | 1.3462 |
+| 68 | 1e-4 | 16 | 18/40 | 0.6347 | 1.5988 | 0.1621 | 0.3335 | 0.4849 | 0.6126 | 1.1527 |
+| 69 | 1e-3 | 16 | 17/40 | 0.5718 | 1.1852 | 0.4039 | 0.6336 | 0.7640 | 0.2410 | 0.8013 |
+
+**Best by eval RMSE**: exp66 (1.1156, PARTIAL 17/40)
 
 ---
 
-## Overall Ranking (Top 10 by Score)
+## Overall Ranking by Eval RMSE (Top 15)
 
-| Rank | Exp | Model | Score | RMSE | ABS_REL | Key Params |
-|------|-----|-------|-------|------|---------|------------|
-| 1 | 40 | **FOA** | **0.9802** | 1.2223 | 0.4153 | lr=5e-4, bs=16, dw=1.0, fw=0.1, hw=0.1 |
-| 2 | 62 | **Pretrained ViT** | **0.9818** | 1.2350 | 0.3909 | lr=5e-5, bs=16 |
-| 3 | 37 | FOA | 0.9819 | 1.2283 | 0.4068 | lr=5e-4, bs=32, dw=1.0, fw=0.1, hw=0.1 |
-| 4 | 47 | FOA | 0.9841 | 1.2358 | 0.3968 | lr=1e-3, bs=32, dw=2.0, fw=0.1, hw=0.1 |
-| 5 | 42 | FOA | 0.9863 | 1.2384 | 0.3981 | lr=5e-4, bs=32, dw=1.0, fw=0.2, hw=0.1 |
-| 6 | 41 | FOA | 0.9865 | 1.2362 | 0.4037 | lr=1e-3, bs=32, dw=1.0, fw=0.2, hw=0.1 |
-| 7 | 61 | Pretrained ViT | 0.9875 | 1.2434 | 0.3903 | lr=1e-4, bs=16 |
-| 8 | 45 | FOA | 0.9878 | 1.2237 | 0.4375 | lr=1e-3, bs=32, dw=1.0, fw=0.2, hw=0.2 |
-| 9 | 01 | Baseline | 0.9885 | 1.2396 | 0.4026 | lr=1e-3, bs=32 |
-| 10 | 14 | EchoDiffusion | 0.9889 | 1.2372 | 0.4096 | lr=5e-4, bs=32 |
-
----
-
-## Key Observations
-
-1. **FOA dominates** — 6 of top 10 spots. Best overall: exp40 (FOA, lr=5e-4, bs=16).
-2. **Pretrained ViT** is competitive at rank 2 (exp62, score=0.9818), very close to FOA.
-3. **Lowest RMSE** (1.2223) belongs to FOA exp40; **lowest ABS_REL** (0.3815) to baseline exp04 and echodiff exp11.
-4. **FOA variants (crossattn, featbank, msattn, channelattn)** all failed — need debugging.
-5. **Echo-Net (Parida)** improved from earlier failed runs — best PARTIAL is exp66 (lr=1e-3, bs=8) with score 1.0652 at epoch 16/40. Still trailing FOA/ViT but viable. Full 40-epoch run pending.
-6. **Pretrained ResNet** underperforms (scores ~1.07) compared to other models (~0.98).
-7. **Missing FOA experiments**: exp43, exp48, exp53, exp54, exp55 — logs not found.
-8. **bulk0408 was killed early** — only exps 56–69 + exp121 ran. Echo-Net runs are PARTIAL, batvision (71–75) and groups B/C (76–120) not started.
+| Rank | Exp | Model | RMSE↓ | ABS_REL | δ<1.25 | δ<1.25² | δ<1.25³ | Log10 | MAE |
+|------|-----|-------|-------|---------|--------|---------|---------|-------|-----|
+| 1 | 49 | **FOA** | **1.0803** | 0.4631 | 0.5023 | 0.7141 | 0.8323 | 0.1554 | 0.6753 |
+| 2 | 52 | FOA | 1.0814 | 0.4921 | 0.4933 | 0.7120 | 0.8306 | 0.1579 | 0.6844 |
+| 3 | 01 | Baseline | 1.0817 | 0.4553 | 0.5031 | 0.7149 | 0.8329 | 0.1548 | 0.6714 |
+| 4 | 65 | PreViT | 1.0818 | 0.4467 | 0.4959 | 0.7105 | 0.8311 | 0.1557 | 0.6733 |
+| 5 | 61 | PreViT | 1.0824 | 0.4496 | 0.4989 | 0.7124 | 0.8308 | 0.1557 | 0.6720 |
+| 6 | 50 | FOA | 1.0858 | 0.4691 | 0.4860 | 0.7055 | 0.8281 | 0.1579 | 0.6785 |
+| 7 | 44 | FOA | 1.0871 | 0.4781 | 0.4986 | 0.7132 | 0.8314 | 0.1571 | 0.6823 |
+| 8 | 41 | FOA | 1.0875 | 0.4568 | 0.4900 | 0.7102 | 0.8317 | 0.1567 | 0.6791 |
+| 9 | 51 | FOA | 1.0881 | 0.4839 | 0.4913 | 0.7098 | 0.8303 | 0.1579 | 0.6834 |
+| 10 | 36 | FOA | 1.0884 | 0.4850 | 0.4943 | 0.7108 | 0.8297 | 0.1582 | 0.6867 |
+| 11 | 48 | FOA | 1.0886 | 0.4625 | 0.4920 | 0.7081 | 0.8289 | 0.1570 | 0.6821 |
+| 12 | 40 | FOA | 1.0888 | 0.4693 | 0.4962 | 0.7129 | 0.8316 | 0.1572 | 0.6812 |
+| 13 | 121 | EchoDiff+W2V | 1.0892 | 0.4485 | 0.4887 | 0.7075 | 0.8304 | 0.1565 | 0.6740 |
+| 14 | 03 | Baseline | 1.0894 | 0.4295 | 0.4934 | 0.7079 | 0.8314 | 0.1557 | 0.6738 |
+| 15 | 42 | FOA | 1.0904 | 0.4572 | 0.5018 | 0.7145 | 0.8312 | 0.1566 | 0.6782 |
 
 ---
 
 ## Status Summary
 
-| Model | Total | Done | Partial | Failed | No Result |
-|-------|-------|------|---------|--------|-----------|
-| Baseline | 5 | 5 | 0 | 0 | 0 |
-| ViT (scratch) | 5 | 5 | 0 | 0 | 0 |
-| EchoDiffusion | 5 | 5 | 0 | 0 | 0 |
-| FOA CrossAttn | 5 | 0 | 0 | 5 | 0 |
-| FOA FeatBank | 5 | 0 | 0 | 5 | 0 |
-| FOA MSAttn | 5 | 0 | 0 | 5 | 0 |
-| FOA ChannelAttn | 5 | 0 | 0 | 5 | 0 |
-| FOA Original | 15* | 10 | 3 | 2 | 0 |
-| Pretrained ResNet | 5 | 5 | 0 | 0 | 0 |
-| Pretrained ViT | 5 | 5 | 0 | 0 | 0 |
-| Echo-Net | 4 | 0 | 4 | 0 | 0 |
-| EchoDiff+Wav2Vec | 1 | 0 | 0 | 1 | 0 |
-
-*5 FOA original experiments (43, 48, 53, 54, 55) have no log files.
+| Model | Train | Eval OK | Eval Fail | Best Eval RMSE | Best Exp |
+|-------|-------|---------|-----------|----------------|----------|
+| Baseline UNet | 5 DONE | 5 | 0 | 1.0817 | exp01 |
+| AudioDepthViT | 5 DONE | 5 | 0 | 1.1055 | exp08 |
+| EchoDiffusion | 5 DONE | 5 | 0 | 1.0908 | exp14 |
+| EchoDiff+Wav2Vec | 4 DONE | 4 | 0 | 1.0892 | exp121 |
+| FOA CrossAttn | 5 DONE | 0 | 5 | — | — |
+| FOA FeatBank | 5 DONE | 0 | 5 | — | — |
+| FOA MSAttn | 5 DONE | 0 | 5 | — | — |
+| FOA ChannelAttn | 5 DONE | 0 | 5 | — | — |
+| FOA v2 | 5 DONE | 0 | 5 | — | — |
+| FOA Original | 20 DONE | 20 | 0 | **1.0803** | **exp49** |
+| Pretrained ResNet-50 | 5 DONE | 5 | 0 | 1.1444 | exp59 |
+| Pretrained ViT-B/16 | 5 DONE | 5 | 0 | 1.0818 | exp65 |
+| Echo-Net | 4 PARTIAL | 4 | 0 | 1.1156 | exp66 |
+| **Total** | **78 train** | **58 eval** | **25 fail** | | |

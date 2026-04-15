@@ -1,0 +1,108 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from WANDB_API_KEY.
+wandb: Currently logged in as: branden to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run wly7e3o5
+wandb: Tracking run with wandb version 0.25.1
+wandb: Run data is saved locally in /root/storage/implementation/shared_audio/baseline/wandb/run-20260410_172728-wly7e3o5
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run unet_256_soundspaces_BS32_Lr0.0001_AdamW_exp73_batvision_lr1e4_bs32
+wandb: ⭐️ View project at https://wandb.ai/branden/neurips_audio_depth
+wandb: 🚀 View run at https://wandb.ai/branden/neurips_audio_depth/runs/wly7e3o5
+============================================================
+Model: batvision  Dataset: soundspaces
+BS: 32  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples from 72 scenes (filtered 5240 with >10% no-depth)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples from 9 scenes (filtered 592 with >10% no-depth)
+Train: 23560, Val: 2951
+Model: batvision (54.4M params)
+Epoch [1/40] L:0.2802 D:0.2802 104s
+Epoch [2/40] L:0.2112 D:0.2112 95s
+Epoch [3/40] L:0.1994 D:0.1994 96s
+Epoch [4/40] L:0.1875 D:0.1875 104s
+  Val L:0.2254 ABS:0.4125 RMSE:1.2603 d1:0.5032
+  >> Best (score:1.0059 RMSE:1.2603 ABS:0.4125)
+Epoch [5/40] L:0.1809 D:0.1809 95s
+Epoch [6/40] L:0.1749 D:0.1749 104s
+Epoch [7/40] L:0.1688 D:0.1688 105s
+Epoch [8/40] L:0.1622 D:0.1622 95s
+  Val L:0.2269 ABS:0.3986 RMSE:1.2683 d1:0.5109
+Epoch [9/40] L:0.1546 D:0.1546 95s
+Epoch [10/40] L:0.1464 D:0.1464 95s
+Epoch [11/40] L:0.1370 D:0.1370 101s
+Epoch [12/40] L:0.1280 D:0.1280 96s
+  Val L:0.2240 ABS:0.4085 RMSE:1.2464 d1:0.5301
+  >> Best (score:0.9950 RMSE:1.2464 ABS:0.4085)
+Epoch [13/40] L:0.1201 D:0.1201 95s
+Epoch [14/40] L:0.1121 D:0.1121 96s
+Epoch [15/40] L:0.1052 D:0.1052 97s
+Epoch [16/40] L:0.0989 D:0.0989 108s
+  Val L:0.2329 ABS:0.4477 RMSE:1.2581 d1:0.5368
+Epoch [17/40] L:0.0930 D:0.0930 97s
+Epoch [18/40] L:0.0878 D:0.0878 98s
+Epoch [19/40] L:0.0838 D:0.0838 94s
+Epoch [20/40] L:0.0799 D:0.0799 94s
+  Val L:0.2370 ABS:0.4110 RMSE:1.2790 d1:0.5400
+Epoch [21/40] L:0.0758 D:0.0758 95s
+Epoch [22/40] L:0.0728 D:0.0728 97s
+Epoch [23/40] L:0.0704 D:0.0704 101s
+Epoch [24/40] L:0.0668 D:0.0668 99s
+  Val L:0.2459 ABS:0.4519 RMSE:1.2953 d1:0.5335
+Epoch [25/40] L:0.0643 D:0.0643 97s
+Epoch [26/40] L:0.0622 D:0.0622 96s
+Epoch [27/40] L:0.0603 D:0.0603 102s
+Epoch [28/40] L:0.0579 D:0.0579 96s
+  Val L:0.2443 ABS:0.4383 RMSE:1.2950 d1:0.5389
+Epoch [29/40] L:0.0559 D:0.0559 96s
+Epoch [30/40] L:0.0542 D:0.0542 97s
+Epoch [31/40] L:0.0523 D:0.0523 96s
+Epoch [32/40] L:0.0507 D:0.0507 95s
+  Val L:0.2482 ABS:0.4467 RMSE:1.3085 d1:0.5408
+Epoch [33/40] L:0.0495 D:0.0495 104s
+Epoch [34/40] L:0.0480 D:0.0480 97s
+Epoch [35/40] L:0.0465 D:0.0465 95s
+Epoch [36/40] L:0.0455 D:0.0455 103s
+  Val L:0.2506 ABS:0.4418 RMSE:1.3129 d1:0.5375
+Epoch [37/40] L:0.0440 D:0.0440 100s
+Epoch [38/40] L:0.0423 D:0.0423 96s
+Epoch [39/40] L:0.0414 D:0.0414 107s
+Epoch [40/40] L:0.0407 D:0.0407 95s
+wandb: updating run metadata
+wandb: uploading history steps 39-39, summary, console lines 52-53
+wandb: 
+wandb: Run history:
+wandb: best/abs_rel █▁
+wandb:   best/epoch ▁█
+wandb:    best/rmse █▁
+wandb:   best/score █▁
+wandb:        epoch ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:  train/depth █▆▆▅▅▅▅▅▄▄▄▄▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   train/loss █▆▆▅▅▅▅▅▄▄▄▄▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:  val/abs_rel ▃▁▂▇▃█▆▇▇█
+wandb:   val/delta1 ▁▂▆▇█▇██▇▇
+wandb:   val/delta2 ▁▄▇██▆█▇▇▆
+wandb:           +5 ...
+wandb: 
+wandb: Run summary:
+wandb: best/abs_rel 0.40847
+wandb:   best/epoch 12
+wandb:    best/rmse 1.24641
+wandb:   best/score 0.99503
+wandb:        epoch 40
+wandb:  train/depth 0.04067
+wandb:   train/loss 0.04067
+wandb:  val/abs_rel 0.44911
+wandb:   val/delta1 0.53411
+wandb:   val/delta2 0.72338
+wandb:           +5 ...
+wandb: 
+wandb: 🚀 View run unet_256_soundspaces_BS32_Lr0.0001_AdamW_exp73_batvision_lr1e4_bs32 at: https://wandb.ai/branden/neurips_audio_depth/runs/wly7e3o5
+wandb: ⭐️ View project at: https://wandb.ai/branden/neurips_audio_depth
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20260410_172728-wly7e3o5/logs
+  Val L:0.2537 ABS:0.4491 RMSE:1.3177 d1:0.5341
+
+Done. Best score:0.9950 RMSE:1.2464 ABS:0.4085

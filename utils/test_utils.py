@@ -4,21 +4,32 @@ import numpy as np
 import torch
 
 from .metrics import compute_errors, compute_foa_errors
-from .train_utils import is_foa_model, is_echodiffusion_model
+from .train_utils import (
+    is_foa_model, is_foa_variant_model, is_echodiffusion_model,
+    is_foa_v2_js_model,
+)
 
 
 def evaluate(model, eval_loader, eval_set, cfg, device):
     """Run evaluation. Returns (depth_errors, foa_errors_list_or_None)."""
     model.eval()
     depth_errors = []
-    foa = is_foa_model(cfg)
+    foa = is_foa_model(cfg) or is_foa_variant_model(cfg)
     echodiff = is_echodiffusion_model(cfg)
+    js = is_foa_v2_js_model(cfg)
     foa_errors = [] if foa else None
     batch_size = cfg.mode.batch_size
 
     with torch.no_grad():
         for batch_idx, batch in enumerate(eval_loader):
-            if foa:
+            if js:
+                audio, depthgt, gt_foa_batch, _gt_energy = batch
+                gt_foa_batch = gt_foa_batch.to(device)
+                audio, depthgt = audio.to(device), depthgt.to(device)
+                raw_out = model(audio)
+                depth_pred = raw_out["pred_depth"]
+                pred_foa_batch = raw_out["pred_foa"]
+            elif foa:
                 audio, depthgt, gt_foa_batch, _ = batch
                 gt_foa_batch = gt_foa_batch.to(device)
                 audio, depthgt = audio.to(device), depthgt.to(device)

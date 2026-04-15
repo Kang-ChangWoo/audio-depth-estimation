@@ -1,0 +1,24 @@
+============================================================
+Model: echonet  Dataset: soundspaces
+BS: 8  LR: 0.001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples from 72 scenes (filtered 5240 with >10% no-depth)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples from 9 scenes (filtered 592 with >10% no-depth)
+Train: 23560, Val: 2951
+Model: echonet (321.3M params)
+Epoch [1/40] L:0.2436 D:0.2436 5918s
+Epoch [2/40] L:0.2299 D:0.2299 5908s
+Epoch [3/40] L:0.2246 D:0.2246 5908s
+Epoch [4/40] L:0.2191 D:0.2191 5906s
+  Val L:8.7788 ABS:0.8141 RMSE:1.7428 d1:0.1883
+  >> Best (score:1.4642 RMSE:1.7428 ABS:0.8141)
+Epoch [5/40] L:0.2154 D:0.2154 5910s
+Epoch [6/40] L:0.2124 D:0.2124 5907s
+Epoch [7/40] L:0.2100 D:0.2100 5907s
+Epoch [8/40] L:0.2054 D:0.2054 5903s
+  Val L:4.1516 ABS:0.6959 RMSE:1.7247 d1:0.2276
+  >> Best (score:1.4160 RMSE:1.7247 ABS:0.6959)

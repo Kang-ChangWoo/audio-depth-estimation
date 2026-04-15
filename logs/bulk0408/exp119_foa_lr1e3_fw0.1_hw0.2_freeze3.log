@@ -1,0 +1,71 @@
+============================================================
+Model: audio_depth_foa  Dataset: soundspaces
+BS: 32  LR: 0.001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples from 72 scenes (filtered 5240 with >10% no-depth) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples from 9 scenes (filtered 592 with >10% no-depth) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Model: audio_depth_foa (55.0M params)
+  [Warmup] SH branch frozen for 3 epochs
+Epoch [1/40] L:0.2505 D:0.2505 163s
+Epoch [2/40] L:0.2175 D:0.2175 189s
+Epoch [3/40] L:0.2055 D:0.2055 176s
+  [Warmup done] SH branch unfrozen
+Epoch [4/40] L:0.2810 D:0.2031 F:0.0680 H:0.3556 KL:0.0000 167s
+  Val L:0.3114 ABS:0.4734 RMSE:1.2887 d1:0.4888
+  >> Best (score:1.0441 RMSE:1.2887 ABS:0.4734)
+Epoch [5/40] L:0.2684 D:0.1986 F:0.0494 H:0.3245 KL:0.0000 152s
+Epoch [6/40] L:0.2604 D:0.1939 F:0.0439 H:0.3101 KL:0.0000 286s
+Epoch [7/40] L:0.2552 D:0.1905 F:0.0421 H:0.3027 KL:0.0000 189s
+Epoch [8/40] L:0.2496 D:0.1867 F:0.0405 H:0.2946 KL:0.0000 156s
+  Val L:0.2983 ABS:0.4210 RMSE:1.2795 d1:0.4696
+  >> Best (score:1.0220 RMSE:1.2795 ABS:0.4210)
+Epoch [9/40] L:0.2445 D:0.1837 F:0.0388 H:0.2847 KL:0.0000 171s
+Epoch [10/40] L:0.2404 D:0.1806 F:0.0372 H:0.2804 KL:0.0000 153s
+Epoch [11/40] L:0.2365 D:0.1772 F:0.0364 H:0.2782 KL:0.0000 156s
+Epoch [12/40] L:0.2322 D:0.1733 F:0.0352 H:0.2767 KL:0.0000 155s
+  Val L:0.2786 ABS:0.4090 RMSE:1.2455 d1:0.5114
+  >> Best (score:0.9945 RMSE:1.2455 ABS:0.4090)
+Epoch [13/40] L:0.2283 D:0.1698 F:0.0352 H:0.2747 KL:0.0000 172s
+Epoch [14/40] L:0.2230 D:0.1655 F:0.0340 H:0.2708 KL:0.0000 156s
+Epoch [15/40] L:0.2193 D:0.1620 F:0.0337 H:0.2697 KL:0.0000 160s
+Epoch [16/40] L:0.2143 D:0.1576 F:0.0330 H:0.2669 KL:0.0000 160s
+  Val L:0.2870 ABS:0.4458 RMSE:1.2403 d1:0.4997
+Epoch [17/40] L:0.2098 D:0.1536 F:0.0326 H:0.2647 KL:0.0000 161s
+Epoch [18/40] L:0.2040 D:0.1485 F:0.0317 H:0.2614 KL:0.0000 173s
+Epoch [19/40] L:0.1987 D:0.1436 F:0.0314 H:0.2596 KL:0.0000 263s
+Epoch [20/40] L:0.1938 D:0.1394 F:0.0311 H:0.2568 KL:0.0000 361s
+  Val L:0.2837 ABS:0.4447 RMSE:1.2308 d1:0.5229
+Epoch [21/40] L:0.1881 D:0.1342 F:0.0307 H:0.2542 KL:0.0000 234s
+Epoch [22/40] L:0.1829 D:0.1296 F:0.0298 H:0.2515 KL:0.0000 174s
+Epoch [23/40] L:0.1771 D:0.1247 F:0.0297 H:0.2474 KL:0.0000 175s
+Epoch [24/40] L:0.1719 D:0.1199 F:0.0292 H:0.2451 KL:0.0000 171s
+  Val L:0.3003 ABS:0.4265 RMSE:1.2648 d1:0.5173
+Epoch [25/40] L:0.1670 D:0.1156 F:0.0290 H:0.2425 KL:0.0000 185s
+Epoch [26/40] L:0.1610 D:0.1103 F:0.0288 H:0.2390 KL:0.0000 174s
+Epoch [27/40] L:0.1561 D:0.1061 F:0.0285 H:0.2357 KL:0.0000 174s
+Epoch [28/40] L:0.1509 D:0.1017 F:0.0283 H:0.2315 KL:0.0000 159s
+  Val L:0.2978 ABS:0.4212 RMSE:1.2693 d1:0.5228
+Epoch [29/40] L:0.1462 D:0.0977 F:0.0281 H:0.2285 KL:0.0000 186s
+Epoch [30/40] L:0.1418 D:0.0938 F:0.0279 H:0.2258 KL:0.0000 164s
+Epoch [31/40] L:0.1378 D:0.0905 F:0.0277 H:0.2227 KL:0.0000 164s
+Epoch [32/40] L:0.1338 D:0.0871 F:0.0275 H:0.2196 KL:0.0000 174s
+  Val L:0.3052 ABS:0.4434 RMSE:1.2830 d1:0.5258
+Epoch [33/40] L:0.1300 D:0.0839 F:0.0274 H:0.2168 KL:0.0000 191s
+Epoch [34/40] L:0.1269 D:0.0813 F:0.0272 H:0.2142 KL:0.0000 215s
+Epoch [35/40] L:0.1237 D:0.0785 F:0.0270 H:0.2125 KL:0.0000 327s
+Epoch [36/40] L:0.1205 D:0.0758 F:0.0267 H:0.2102 KL:0.0000 370s
+  Val L:0.3151 ABS:0.4273 RMSE:1.3011 d1:0.5168
+Epoch [37/40] L:0.1182 D:0.0738 F:0.0267 H:0.2087 KL:0.0000 178s
+Epoch [38/40] L:0.1162 D:0.0722 F:0.0268 H:0.2068 KL:0.0000 184s
+Epoch [39/40] L:0.1131 D:0.0695 F:0.0264 H:0.2049 KL:0.0000 196s
+Epoch [40/40] L:0.1108 D:0.0676 F:0.0261 H:0.2031 KL:0.0000 229s
+  Val L:0.3109 ABS:0.4315 RMSE:1.2986 d1:0.5201
+
+Done. Best score:0.9945 RMSE:1.2455 ABS:0.4090

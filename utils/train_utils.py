@@ -8,7 +8,7 @@ from models import (
     BatVisionUNet, PretrainedViT, PretrainedResNet, AudioDepthViT,
     FOACrossAttnGenerator, FOAFeatBankGenerator,
     FOAMultiScaleAttnGenerator, FOAChannelAttnGenerator,
-    FOAv2Generator,
+    FOAv2Generator, FOAv2JSGenerator,
     DepthLoss, FOAGuidedLoss, SHHistogramAlignmentLoss, AudioDepthFOALoss,
 )
 
@@ -18,6 +18,7 @@ _FOA_VARIANT_CLASSES = {
     'foa_msattn': FOAMultiScaleAttnGenerator,
     'foa_channelattn': FOAChannelAttnGenerator,
     'foa_v2': FOAv2Generator,
+    'foa_v2_js': FOAv2JSGenerator,
 }
 
 
@@ -27,8 +28,13 @@ def is_foa_model(cfg):
 
 def is_foa_variant_model(cfg):
     """Check if config specifies an FOA variant model (crossattn, featbank, msattn, channelattn)."""
-    foa_variants = ('foa_crossattn', 'foa_featbank', 'foa_msattn', 'foa_channelattn', 'foa_v2')
+    foa_variants = ('foa_crossattn', 'foa_featbank', 'foa_msattn', 'foa_channelattn', 'foa_v2', 'foa_v2_js')
     return getattr(cfg.model, 'name', '') in foa_variants
+
+
+def is_foa_v2_js_model(cfg):
+    """Check if config specifies the foa_v2_js experimental fork."""
+    return getattr(cfg.model, 'name', '') == 'foa_v2_js'
 
 
 def is_echodiffusion_model(cfg):
@@ -219,6 +225,20 @@ def compute_gt_depth_sh(model, gt_depth):
     base = get_base_model(model)
     with torch.no_grad():
         coeffs = base.project_depth_to_sh(gt_depth)
+        sh_map = base.reconstruct_from_coeffs(coeffs)
+    return sh_map, coeffs
+
+
+def compute_gt_energy_sh(model, gt_energy):
+    """Compute SH projection of the ambisonic energy map.
+
+    Used by foa_v2_js to align the predicted SH branch directly against the
+    actual ambisonic-derived directional energy distribution, rather than
+    against an SH projection of the depth map.
+    """
+    base = get_base_model(model)
+    with torch.no_grad():
+        coeffs = base.project_depth_to_sh(gt_energy)
         sh_map = base.reconstruct_from_coeffs(coeffs)
     return sh_map, coeffs
 

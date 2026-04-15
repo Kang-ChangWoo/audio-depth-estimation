@@ -1,0 +1,13 @@
+============================================================
+REVISED: Rerun 25 failed FOA variant tests — Sat Apr 11 08:09:25 Asia 2026
+4 workers × 1 GPU each (GPUs 0-3)
+Vis per scene: 100
+Logs: /root/storage/implementation/shared_audio/baseline/logs/bulk0410
+============================================================
+
+Workers: W0=654893(GPU0) W1=654894(GPU1) W2=654895(GPU2) W3=654897(GPU3)
+
+[08:09:25] [GPU=2] (3/25) exp18_crossattn_lr1e4_fw0.1 [foa_crossattn]
+[08:09:25] [GPU=1] (2/25) exp17_crossattn_lr5e4_fw0.1 [foa_crossattn]
+[08:09:25] [GPU=0] (1/25) exp16_crossattn_lr1e3_fw0.1 [foa_crossattn]
+[08:09:25] [GPU=3] (4/25) exp19_crossattn_lr1e3_fw0.2 [foa_crossattn]

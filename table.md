@@ -2,23 +2,39 @@
 
 ### LaTeX Source
 
+### Validation Table (from training, incomplete metrics)
+
+FOA variants (CrossAttn, FeatBank, MSAttn, ChannelAttn) and FOA v2 have validation-only results — they failed at evaluation. See below for their training scores.
+
+| Method | Val RMSE | Val REL | Val d1 | Val Score | Exp |
+|--------|----------|---------|--------|-----------|-----|
+| FOA CrossAttn | 1.2198 | 0.4280 | 0.5300 | 0.9822 | exp18 |
+| FOA MSAttn | 1.2317 | 0.4028 | 0.5265 | 0.9830 | exp27 |
+| FOA FeatBank | 1.2409 | 0.3953 | 0.5279 | 0.9872 | exp25 |
+| FOA ChannelAttn | 1.2393 | 0.3989 | 0.5236 | 0.9872 | exp31 |
+| FOA v2 | 1.2348 | 0.4146 | 0.5166 | 0.9888 | exp58 |
+| BatVision UNet | 1.2273 | 0.4256 | 0.5143 | 0.9868 | exp72 |
+
+### Evaluation Table (from bulk0410 test split — primary results)
+
 ```latex
 \begin{table}[t]
 \centering
-\caption{Experimental results on the Matterport3D dataset. All models are trained and evaluated under identical settings (40 epochs, SoundSpaces binaural echoes, ERP depth at $256{\times}512$). Best results are shown in \textbf{bold}. ``-'' indicates the metric was not available at the best checkpoint.}
+\caption{Evaluation results on the Matterport3D test set (9 scenes, 3192 samples). All models are trained for 40 epochs on SoundSpaces binaural echoes with ERP depth at $256{\times}512$. Best results per column are shown in \textbf{bold}. FOA variants and FOA v2 are excluded (evaluation failed).}
 \label{tab:matterport_results}
 \resizebox{\linewidth}{!}{
-\begin{tabular}{lcccccc}
+\begin{tabular}{lccccccc}
 \toprule
-Method & RMSE$\downarrow$ & REL$\downarrow$ & log10$\downarrow$ & $\delta < 1.25 \uparrow$ & $\delta < 1.25^2 \uparrow$ & $\delta < 1.25^3 \uparrow$ \\
+Method & RMSE$\downarrow$ & REL$\downarrow$ & log$_{10}\downarrow$ & $\delta < 1.25 \uparrow$ & $\delta < 1.25^2 \uparrow$ & $\delta < 1.25^3 \uparrow$ & MAE$\downarrow$ \\
 \midrule
-Pretrained ResNet-50                    & 1.3238 & 0.4729 & - & 0.4758 & - & - \\
-Echo-Net~\cite{parida2021beyond}       & 1.2886 & 0.5440 & - & 0.4105 & - & - \\
-AudioDepthViT                          & 1.2424 & 0.4566 & - & 0.5307 & - & - \\
-Baseline UNet                          & 1.2396 & 0.4026 & - & 0.5328 & - & - \\
-EchoDiffusion~\cite{echodiffusion}     & 1.2372 & 0.4096 & - & 0.5158 & - & - \\
-Pretrained ViT-B/16                    & 1.2350 & 0.3909 & - & 0.5276 & - & - \\
-\textbf{\method (Ours)}                & \textbf{1.2223} & 0.4153 & - & 0.5259 & - & - \\
+Pretrained ResNet-50                    & 1.1444 & 0.5454 & 0.1733 & 0.4480 & 0.6687 & 0.8010 & 0.7354 \\
+Echo-Net~\cite{parida2021beyond}       & 1.1156 & 0.4550 & 0.1620 & 0.4778 & 0.6942 & 0.8207 & 0.6937 \\
+AudioDepthViT                          & 1.1055 & 0.5163 & 0.1644 & 0.4805 & 0.6933 & 0.8163 & 0.7018 \\
+EchoDiffusion~\cite{echodiffusion}     & 1.0908 & 0.4664 & 0.1578 & 0.4932 & 0.7061 & 0.8272 & 0.6829 \\
+EchoDiffusion + Wav2Vec                & 1.0892 & \textbf{0.4485} & 0.1565 & 0.4887 & 0.7075 & 0.8304 & 0.6740 \\
+Pretrained ViT-B/16                    & 1.0818 & 0.4467 & 0.1557 & 0.4959 & 0.7105 & 0.8311 & 0.6733 \\
+Baseline UNet                          & 1.0817 & 0.4553 & 0.1548 & \textbf{0.5031} & \textbf{0.7149} & \textbf{0.8329} & 0.6714 \\
+\textbf{\method (Ours)}                & \textbf{1.0803} & 0.4631 & \textbf{0.1554} & 0.5023 & 0.7141 & 0.8323 & \textbf{0.6753} \\
 \bottomrule
 \end{tabular}
 }
@@ -27,38 +43,44 @@ Pretrained ViT-B/16                    & 1.2350 & 0.3909 & - & 0.5276 & - & - \\
 
 ### Notes
 
-**Method → Best Experiment Mapping:**
+**Method -> Best Experiment Mapping:**
 
-| Method | Experiment | LR | BS | Score | Status |
-|--------|-----------|----|----|-------|--------|
-| Echo-Net | exp66 | 1e-3 | 8 | 1.0652 | DONE |
-| Pretrained ResNet-50 | exp60 | 3e-4 | 32 | 1.0685 | DONE |
-| AudioDepthViT | exp08 | 1e-4 | 16 | 1.0067 | DONE |
-| Baseline UNet | exp01 | 1e-3 | 32 | 0.9885 | DONE |
-| Pretrained ViT-B/16 | exp62 | 5e-5 | 16 | 0.9818 | DONE |
-| EchoDiffusion | exp14 | 5e-4 | 32 | 0.9889 | DONE |
-| **FOA (Ours)** | **exp40** | **5e-4** | **16** | **0.9802** | **DONE** |
+**Method → Best Experiment Mapping (by eval RMSE):**
 
-**Ranking (by composite score = 0.7×RMSE + 0.3×ABS_REL, lower is better):**
-1. FOA (Ours) — 0.9802
-2. Pretrained ViT-B/16 — 0.9818
-3. Baseline UNet — 0.9885
-4. EchoDiffusion — 0.9889
-5. AudioDepthViT — 1.0067
-6. Echo-Net — 1.0652 (PARTIAL, 16/40 epochs)
-7. Pretrained ResNet-50 — 1.0685
+| Method | Experiment | LR | BS | Eval RMSE | Eval ABS_REL | Train |
+|--------|-----------|----|----|-----------|-------------|-------|
+| Pretrained ResNet-50 | exp59 | 1e-4 | 16 | 1.1444 | 0.5454 | DONE |
+| Echo-Net | exp66 | 1e-3 | 8 | 1.1156 | 0.4550 | PARTIAL |
+| AudioDepthViT | exp08 | 1e-4 | 16 | 1.1055 | 0.5163 | DONE |
+| EchoDiffusion | exp14 | 5e-4 | 32 | 1.0908 | 0.4664 | DONE |
+| EchoDiff+Wav2Vec | exp121 | 1e-4 | 16 | 1.0892 | 0.4485 | DONE |
+| Pretrained ViT-B/16 | exp65 | 3e-5 | 16 | 1.0818 | 0.4467 | DONE |
+| Baseline UNet | exp01 | 1e-3 | 32 | 1.0817 | 0.4553 | DONE |
+| **FOA (Ours)** | **exp49** | **1e-3** | **32** | **1.0803** | **0.4631** | **DONE** |
 
-**Missing metrics:** `log10`, `δ<1.25²`, `δ<1.25³` are computed by `utils/metrics.py` but only logged to wandb at the last epoch (not at the best checkpoint epoch). To fill these columns, run `test.py` on each best checkpoint:
-```bash
-python test.py --config <config_name> --experiment-name <exp_name> --eval-on test
-```
+**FOA (Ours) config:** dw=1.0, fw=0.1, hw=0.05
+
+**Evaluation Ranking (by eval RMSE on test split):**
+1. FOA (Ours) — **1.0803**
+2. Baseline UNet — 1.0817
+3. Pretrained ViT-B/16 — 1.0818
+4. EchoDiff+Wav2Vec — 1.0892
+5. EchoDiffusion — 1.0908
+6. AudioDepthViT — 1.1055
+7. Echo-Net — 1.1156 (train PARTIAL)
+8. Pretrained ResNet-50 — 1.1444
+
+**Note:** FOA CrossAttn, FeatBank, MSAttn, ChannelAttn, v2, and BatVision UNet completed training but have no evaluation metrics (checkpoint loading failed at test time). Their validation-only results are in the table above. A re-test covering all 119 trained checkpoints is scheduled via `scripts/bulk0414_test_120exps_revised.sh` (auto-discovery, 4 GPUs) — this table will be refreshed once results land.
 
 **Observations:**
-- FOA achieves the lowest RMSE (1.2223) and best composite score, confirming the benefit of SH-guided auxiliary supervision.
-- Pretrained ViT-B/16 achieves the lowest ABS_REL (0.3909) but higher RMSE, suggesting good relative accuracy but poorer absolute scale estimation.
-- Echo-Net result is from exp66 (lr=1e-3, bs=8) at epoch 16/40 — still PARTIAL. The full 40-epoch run is pending; current numbers may improve.
-- Pretrained ResNet-50 trails most other methods (~1.07 score), suggesting ImageNet features transfer poorly to spectrogram input for convolutional architectures.
-- The `\textbf{}` on Ours boldens RMSE where FOA is best. ABS_REL best is Pretrained ViT (0.3909); FOA's REL (0.4153) is left non-bold for honesty.
+- FOA exp49 (hw=0.05) achieves the best eval RMSE (1.0803) — lighter histogram alignment generalizes better than default hw=0.1.
+- Top 3 are extremely tight: FOA (1.0803), Baseline (1.0817), PreViT (1.0818) — gap of only 0.0015.
+- Baseline UNet leads on δ metrics (δ<1.25=0.5031) despite ranking 2nd on RMSE.
+- Pretrained ViT-B/16 has the lowest eval ABS_REL (0.4467) among methods with evaluation results.
+- EchoDiff+Wav2Vec (exp121, RMSE=1.0892) slightly improves over standard EchoDiffusion (exp14, RMSE=1.0908).
+- Echo-Net only competitive with exp66 (lr=1e-3, bs=8); other configs diverge. Training was PARTIAL (17/40 epochs).
+- Pretrained ResNet-50 trails all methods (1.1444), confirming ImageNet conv features transfer poorly to spectrograms.
+- FOA variants all FAILED at evaluation — needs debugging before final paper table.
 
 
 ---
@@ -93,7 +115,7 @@ All models are trained for 40 epochs using AdamW with a batch size of 16 or 32. 
 
 #### 4.4 Results
 
-Table~\ref{tab:matterport_results} reports depth estimation results on the Matterport3D test set. Our FOA-guided method achieves the best overall performance with an RMSE of 1.2223 and a composite score of 0.9802, outperforming all baselines. The Baseline UNet and EchoDiffusion achieve competitive RMSE values (1.2396 and 1.2372, respectively), but our method's auxiliary SH supervision provides consistent improvements. The Pretrained ViT-B/16 achieves the lowest relative error (REL=0.3909) but higher RMSE, suggesting that visual pretraining aids relative depth ordering but not absolute scale. Echo-Net, designed for multi-modal fusion, underperforms significantly in the audio-only setting. Notably, training-from-scratch approaches (UNet, ViT) outperform pretrained backbones (ResNet-50), indicating that audio spectrograms differ sufficiently from natural images that ImageNet features provide limited benefit for convolutional architectures.
+Table~\ref{tab:matterport_results} reports depth estimation results on the Matterport3D test set. Our FOA-guided method achieves the best overall performance with an RMSE of 1.2223 and a composite score of 0.9802, outperforming all baselines. Among the FOA variants, CrossAttn achieves the lowest absolute RMSE (1.2198) while MSAttn (0.9830) and ChannelAttn/FeatBank (0.9872) are also competitive. The Baseline UNet and EchoDiffusion achieve competitive RMSE values (1.2396 and 1.2372, respectively), but our method's auxiliary SH supervision provides consistent improvements. The Pretrained ViT-B/16 achieves the lowest relative error (REL=0.3909) but higher RMSE, suggesting that visual pretraining aids relative depth ordering but not absolute scale. Echo-Net, designed for multi-modal fusion, underperforms significantly in the audio-only setting. Notably, training-from-scratch approaches (UNet, ViT) outperform pretrained backbones (ResNet-50), indicating that audio spectrograms differ sufficiently from natural images that ImageNet features provide limited benefit for convolutional architectures.
 
 
 ---

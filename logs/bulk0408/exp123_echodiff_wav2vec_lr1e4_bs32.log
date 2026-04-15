@@ -2,13 +2,13 @@ Some weights of Wav2Vec2Model were not initialized from the model checkpoint at 
 You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
 wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
 wandb: Currently logged in as: branden to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
-wandb: setting up run 5cgpsw3c
+wandb: setting up run pl6l4v11
 wandb: Tracking run with wandb version 0.25.1
-wandb: Run data is saved locally in /root/storage/implementation/shared_audio/baseline/wandb/run-20260409_174408-5cgpsw3c
+wandb: Run data is saved locally in /root/storage/implementation/shared_audio/baseline/wandb/run-20260410_173321-pl6l4v11
 wandb: Run `wandb offline` to turn off syncing.
 wandb: Syncing run echodiffusion_soundspaces_BS32_Lr0.0001_AdamW_exp123_echodiff_wav2vec_lr1e4_bs32
 wandb: ⭐️ View project at https://wandb.ai/branden/neurips_audio_depth
-wandb: 🚀 View run at https://wandb.ai/branden/neurips_audio_depth/runs/5cgpsw3c
+wandb: 🚀 View run at https://wandb.ai/branden/neurips_audio_depth/runs/pl6l4v11
 ============================================================
 Model: echodiffusion  Dataset: soundspaces
 BS: 32  LR: 0.0001  Opt: AdamW
@@ -21,4 +21,92 @@ Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
 [val] 2951 samples from 9 scenes (filtered 592 with >10% no-depth) [waveform=ON]
 Train: 23560, Val: 2951
 Model: echodiffusion (132.6M params)
-Epoch [1/40] L:0.3395 D:0.3395 479s
+Epoch [1/40] L:0.3129 D:0.3129 475s
+Epoch [2/40] L:0.2101 D:0.2101 478s
+Epoch [3/40] L:0.1990 D:0.1990 493s
+Epoch [4/40] L:0.1934 D:0.1934 491s
+  Val L:0.2315 ABS:0.4144 RMSE:1.2949 d1:0.4774
+  >> Best (score:1.0308 RMSE:1.2949 ABS:0.4144)
+Epoch [5/40] L:0.1889 D:0.1889 497s
+Epoch [6/40] L:0.1840 D:0.1840 500s
+Epoch [7/40] L:0.1800 D:0.1800 498s
+Epoch [8/40] L:0.1769 D:0.1769 499s
+  Val L:0.2242 ABS:0.4012 RMSE:1.2800 d1:0.5034
+  >> Best (score:1.0164 RMSE:1.2800 ABS:0.4012)
+Epoch [9/40] L:0.1729 D:0.1729 497s
+Epoch [10/40] L:0.1696 D:0.1696 493s
+Epoch [11/40] L:0.1659 D:0.1659 485s
+Epoch [12/40] L:0.1630 D:0.1630 495s
+  Val L:0.2246 ABS:0.3863 RMSE:1.2768 d1:0.5024
+  >> Best (score:1.0096 RMSE:1.2768 ABS:0.3863)
+Epoch [13/40] L:0.1574 D:0.1574 491s
+Epoch [14/40] L:0.1531 D:0.1531 492s
+Epoch [15/40] L:0.1473 D:0.1473 494s
+Epoch [16/40] L:0.1415 D:0.1415 489s
+  Val L:0.2320 ABS:0.4677 RMSE:1.2460 d1:0.5167
+Epoch [17/40] L:0.1358 D:0.1358 490s
+Epoch [18/40] L:0.1305 D:0.1305 493s
+Epoch [19/40] L:0.1255 D:0.1255 492s
+Epoch [20/40] L:0.1209 D:0.1209 494s
+  Val L:0.2353 ABS:0.4323 RMSE:1.2734 d1:0.5279
+Epoch [21/40] L:0.1154 D:0.1154 495s
+Epoch [22/40] L:0.1115 D:0.1115 493s
+Epoch [23/40] L:0.1077 D:0.1077 494s
+Epoch [24/40] L:0.1042 D:0.1042 491s
+  Val L:0.2387 ABS:0.4319 RMSE:1.2797 d1:0.5359
+Epoch [25/40] L:0.1001 D:0.1001 493s
+Epoch [26/40] L:0.0978 D:0.0978 498s
+Epoch [27/40] L:0.0955 D:0.0955 527s
+Epoch [28/40] L:0.0923 D:0.0923 741s
+  Val L:0.2435 ABS:0.4279 RMSE:1.2795 d1:0.5323
+Epoch [29/40] L:0.0907 D:0.0907 501s
+Epoch [30/40] L:0.0889 D:0.0889 508s
+Epoch [31/40] L:0.0872 D:0.0872 512s
+Epoch [32/40] L:0.0849 D:0.0849 526s
+  Val L:0.2476 ABS:0.4773 RMSE:1.2926 d1:0.5271
+Epoch [33/40] L:0.0823 D:0.0823 498s
+Epoch [34/40] L:0.0811 D:0.0811 485s
+Epoch [35/40] L:0.0800 D:0.0800 468s
+Epoch [36/40] L:0.0780 D:0.0780 466s
+  Val L:0.2495 ABS:0.4575 RMSE:1.3101 d1:0.5251
+Epoch [37/40] L:0.0780 D:0.0780 467s
+Epoch [38/40] L:0.0765 D:0.0765 468s
+Epoch [39/40] L:0.0745 D:0.0745 467s
+Epoch [40/40] L:0.0737 D:0.0737 466s
+wandb: uploading history steps 39-39, summary, console lines 52-52; updating run metadata
+wandb: uploading output.log; uploading wandb-summary.json; uploading config.yaml
+wandb: uploading summary, console lines 53-54
+wandb: 
+wandb: Run history:
+wandb: best/abs_rel █▅▁
+wandb:   best/epoch ▁▅█
+wandb:    best/rmse █▂▁
+wandb:   best/score █▃▁
+wandb:        epoch ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:  train/depth █▅▅▅▄▄▄▄▄▄▄▄▃▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   train/loss █▅▅▅▄▄▄▄▄▄▄▄▃▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:  val/abs_rel ▃▂▁▇▅▅▄█▆▆
+wandb:   val/delta1 ▁▄▄▆▇█▇▇▇█
+wandb:   val/delta2 ▁▅▆▅▇██▆▆█
+wandb:           +5 ...
+wandb: 
+wandb: Run summary:
+wandb: best/abs_rel 0.38634
+wandb:   best/epoch 12
+wandb:    best/rmse 1.27677
+wandb:   best/score 1.00964
+wandb:        epoch 40
+wandb:  train/depth 0.0737
+wandb:   train/loss 0.0737
+wandb:  val/abs_rel 0.45689
+wandb:   val/delta1 0.53784
+wandb:   val/delta2 0.72574
+wandb:           +5 ...
+wandb: 
+wandb: 🚀 View run echodiffusion_soundspaces_BS32_Lr0.0001_AdamW_exp123_echodiff_wav2vec_lr1e4_bs32 at: https://wandb.ai/branden/neurips_audio_depth/runs/pl6l4v11
+wandb: ⭐️ View project at: https://wandb.ai/branden/neurips_audio_depth
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20260410_173321-pl6l4v11/logs
+  Val L:0.2483 ABS:0.4569 RMSE:1.3074 d1:0.5378
+
+Done. Best score:1.0096 RMSE:1.2768 ABS:0.3863

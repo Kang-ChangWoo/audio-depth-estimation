@@ -2,6 +2,15 @@
 
 from torch.utils.data import DataLoader
 from .dataset import SoundSpacesDataset
+from .dataset_rotated import SoundSpacesDatasetRotated
+
+
+def _select_dataset_class(cfg):
+    """Pick the FOA-rotated dataset when rotate_canonical is enabled."""
+    if (getattr(cfg.dataset, 'rotate_canonical', False)
+            and getattr(cfg.dataset, 'use_ambisonic', False)):
+        return SoundSpacesDatasetRotated
+    return SoundSpacesDataset
 
 
 def make_dataloader(cfg, split, batch_size=None, shuffle=None):
@@ -15,7 +24,8 @@ def make_dataloader(cfg, split, batch_size=None, shuffle=None):
     Returns:
         (dataset, dataloader) tuple
     """
-    dataset = SoundSpacesDataset(cfg, split=split)
+    dataset_cls = _select_dataset_class(cfg)
+    dataset = dataset_cls(cfg, split=split)
     if batch_size is None:
         batch_size = cfg.mode.batch_size
     if shuffle is None:

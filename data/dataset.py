@@ -1,5 +1,6 @@
 """SoundSpaces dataset: binaural echoes -> ERP depth."""
 
+import hashlib
 import json
 import os
 import warnings
@@ -89,7 +90,34 @@ class SoundSpacesDataset(Dataset):
             print(f"  Precomputed SH basis matrix: {self._sh_basis.shape} (order=1)")
 
     def _build_sample_list(self, split):
-        """Build sample list with cached depth-validity filter."""
+        """Build sample list with cached depth-validity filter.
+
+        Two levels of caching:
+          1. Fast path: a pre-filtered sample list persisted per
+             (split, depth_type, use_ambisonic, scenes_signature). When hit,
+             this skips every filesystem stat call and the depth-cache parse.
+          2. Slow path (cache miss): walk the filesystem as before, using the
+             per-sample depth-validity cache, then write the fast-path file.
+        The fast-path filename encodes the current scene list, so any change
+        to the split or scene set automatically invalidates the cache.
+        """
+        scenes_sig = hashlib.md5(
+            ('|'.join(self.scenes)
+             + f'|{self.depth_type}|ambi={int(self.use_ambisonic)}').encode()
+        ).hexdigest()[:12]
+        fast_cache_path = os.path.join(
+            self.root_dir,
+            f'samples_{split}_{self.depth_type}_{scenes_sig}.json')
+
+        if os.path.exists(fast_cache_path):
+            with open(fast_cache_path, 'r') as f:
+                samples = [tuple(s) for s in json.load(f)]
+            print(f"[{split}] {len(samples)} samples (fast cache: "
+                  f"{os.path.basename(fast_cache_path)})"
+                  f"{' [ambisonic=ON]' if self.use_ambisonic else ''}"
+                  f"{' [waveform=ON]' if self.use_waveform else ''}")
+            return samples
+
         cache_path = os.path.join(self.root_dir, f'sample_cache_{self.depth_type}.json')
 
         # Load or build validity cache
@@ -144,6 +172,14 @@ class SoundSpacesDataset(Dataset):
                 json.dump(valid_cache, f)
             print(f"  Saved sample cache: {cache_path}")
 
+        # Persist pre-filtered sample list so future runs skip the FS walk.
+        try:
+            with open(fast_cache_path, 'w') as f:
+                json.dump(samples, f)
+            print(f"  Saved fast sample list: {os.path.basename(fast_cache_path)}")
+        except OSError as e:
+            print(f"  (could not write fast sample cache: {e})")
+
         print(f"[{split}] {len(samples)} samples from {len(self.scenes)} scenes "
               f"(filtered {skipped} with >10% no-depth)"
               f"{' [ambisonic=ON]' if self.use_ambisonic else ''}"
@@ -158,7 +194,7 @@ class SoundSpacesDataset(Dataset):
 
         # Load binaural audio
         audio_path = os.path.join(self.root_dir, scene, 'audio_wav', f'audio_{sample_idx}.wav')
-        waveform, sr = torchaudio.load(audio_path)
+        waveform, sr = torchaudio.load(audio_path, backend="soundfile")
         waveform = waveform.clone()
 
         n_fft, hop_length, win_length = 512, 160, 400
@@ -206,7 +242,7 @@ class SoundSpacesDataset(Dataset):
         if self.use_ambisonic:
             ambi_path = os.path.join(
                 self.root_dir, scene, 'ambi1_npy', f'ambi1_{sample_idx}.npy')
-            ir = np.load(ambi_path).astype(np.float64)
+            ir = self._load_foa_ir(ambi_path, sample_idx)
             h, w = self._erp_shape
             n_ch = self._sh_n_ch
 
@@ -229,6 +265,10 @@ class SoundSpacesDataset(Dataset):
                     foa_target.contiguous(), energy_map.contiguous())
 
         return audio.contiguous(), gt_depth.contiguous()
+
+    def _load_foa_ir(self, ambi_path, sample_idx):
+        """Load raw FOA impulse response. Overridden by rotated subclass."""
+        return np.load(ambi_path).astype(np.float64)
 
     def _get_spectrogram(self, waveform, n_fft=512, power=1.0, win_length=64, hop_length=16):
         spectrogram = T.Spectrogram(n_fft=n_fft, win_length=win_length,

@@ -7,13 +7,13 @@ import time
 
 import numpy as np
 import torch
-import wandb
+# import wandb
 
 from utils.config import load_config
 from utils.train_utils import (
     build_model, build_criterion, is_foa_model, is_foa_variant_model,
-    is_echodiffusion_model,
-    compute_gt_depth_sh, set_sh_branch_frozen,
+    is_echodiffusion_model, is_foa_v2_js_model,
+    compute_gt_depth_sh, compute_gt_energy_sh, set_sh_branch_frozen,
 )
 from utils.visualization import save_batch_visualization
 from utils.metrics import compute_errors
@@ -77,15 +77,73 @@ def _train_step_foa(model, batch, criterion, optimizer, cfg, device,
     return {k: v.item() for k, v in ld.items()}
 
 
+def _train_step_js(model, batch, criterion, optimizer, cfg, device,
+                   use_hist, foa_frozen):
+    """Training step for foa_v2_js: uses the ambisonic energy map directly.
+
+    Unlike _train_step_foa, which projects the depth map into SH space as the
+    histogram alignment target, this step uses the actual ambisonic-derived
+    directional energy map (4th element of the batch). This provides a more
+    direct supervision signal grounded in the recorded sound field rather than
+    a depth-derived proxy.
+    """
+    audio, gtdepth, gt_foa, gt_energy = batch
+    audio = audio.to(device)
+    gtdepth = gtdepth.to(device)
+    gt_foa = gt_foa.to(device)
+    gt_energy = gt_energy.to(device)
+    optimizer.zero_grad()
+    outputs = model(audio, return_hist_maps=use_hist)
+
+    if foa_frozen:
+        loss = criterion.depth_criterion(outputs["pred_depth"], gtdepth) * criterion.depth_weight
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        optimizer.step()
+        return {'total': loss.item(), 'depth': loss.item() / criterion.depth_weight}
+
+    # Project the ambisonic energy map into SH space and use it as the
+    # histogram alignment target (instead of the depth-derived projection).
+    gt_esh, gt_esh_c = (compute_gt_energy_sh(model, gt_energy) if use_hist
+                        else (None, None))
+    ld = criterion(outputs, gtdepth, gt_foa,
+                   gt_depth_sh=gt_esh, gt_depth_sh_coeffs=gt_esh_c)
+    # FOA-depth gradient consistency (inherited from foa_v2 forward path)
+    if "foa_depth_consistency" in outputs:
+        consistency = outputs["foa_depth_consistency"].mean()
+        foa_consistency_weight = getattr(cfg.model, 'foa_consistency_weight', 0.05)
+        ld["total"] = ld["total"] + foa_consistency_weight * consistency
+        ld["consistency"] = consistency
+    ld["total"].backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    optimizer.step()
+    return {k: v.item() for k, v in ld.items()}
+
+
 def _val_metrics(model, val_loader, criterion, cfg, device, foa, echodiff,
-                 use_hist, foa_frozen):
+                 use_hist, foa_frozen, js=False):
     model.eval()
     errors, val_losses = [], []
     vis_pred, vis_gt = None, None
 
     with torch.no_grad():
         for bi, batch in enumerate(val_loader):
-            if foa:
+            if js:
+                audio, gtdepth, gt_foa_v, gt_energy_v = batch
+                audio = audio.to(device)
+                gtdepth = gtdepth.to(device)
+                gt_foa_v = gt_foa_v.to(device)
+                gt_energy_v = gt_energy_v.to(device)
+                out = model(audio, return_hist_maps=use_hist)
+                depth_pred = out["pred_depth"]
+                if foa_frozen:
+                    lv = criterion.depth_criterion(depth_pred, gtdepth) * criterion.depth_weight
+                else:
+                    gt_esh, gt_esh_c = (compute_gt_energy_sh(model, gt_energy_v) if use_hist
+                                        else (None, None))
+                    lv = criterion(out, gtdepth, gt_foa_v,
+                                   gt_depth_sh=gt_esh, gt_depth_sh_coeffs=gt_esh_c)["total"]
+            elif foa:
                 audio, gtdepth, gt_foa_v, _ = batch
                 audio, gtdepth = audio.to(device), gtdepth.to(device)
                 gt_foa_v = gt_foa_v.to(device)
@@ -144,6 +202,7 @@ def train(cfg):
     gpu_ids = list(range(min(n_GPU, 4))) if n_GPU > 0 else []
     foa = is_foa_model(cfg) or is_foa_variant_model(cfg)
     echodiff = is_echodiffusion_model(cfg)
+    js = is_foa_v2_js_model(cfg)
 
     train_set, train_loader = make_dataloader(cfg, 'train', batch_size=cfg.mode.batch_size)
     val_set, val_loader = make_dataloader(cfg, 'val', batch_size=cfg.mode.batch_size)
@@ -179,8 +238,8 @@ def train(cfg):
         wb_cfg.update({k: getattr(cfg.model, k, None)
                        for k in ('depth_weight', 'foa_weight', 'hist_weight',
                                  'sh_order', 'proj_dim', 'foa_freeze_epochs')})
-    wandb.init(project='neurips_audio_depth', name=exp_name,
-               config=wb_cfg, tags=[cfg.model.name, cfg.dataset.name])
+    # wandb.init(project='neurips_audio_depth', name=exp_name,
+            #    config=wb_cfg, tags=[cfg.model.name, cfg.dataset.name])
 
     # Resume
     start_epoch = 1
@@ -211,7 +270,10 @@ def train(cfg):
 
         model.train()
         for batch in train_loader:
-            if foa:
+            if js:
+                s = _train_step_js(model, batch, criterion, optimizer,
+                                   cfg, device, use_hist, foa_frozen)
+            elif foa:
                 s = _train_step_foa(model, batch, criterion, optimizer,
                                     cfg, device, use_hist, foa_frozen)
             elif echodiff:
@@ -243,7 +305,7 @@ def train(cfg):
         if cfg.mode.validation and epoch % cfg.mode.validation_iter == 0:
             vm, vis_p, vis_g = _val_metrics(
                 model, val_loader, criterion, cfg, device, foa, echodiff,
-                use_hist, foa_frozen)
+                use_hist, foa_frozen, js=js)
             print(f"  Val L:{vm['val_loss']:.4f} ABS:{vm['abs_rel']:.4f} "
                   f"RMSE:{vm['rmse']:.4f} d1:{vm['delta1']:.4f}")
 
@@ -268,7 +330,7 @@ def train(cfg):
                 log.update({'best/score': best_score, 'best/rmse': best_rmse,
                             'best/abs_rel': best_abs_rel, 'best/epoch': epoch})
 
-        wandb.log(log)
+        # wandb.log(log)
 
         if epoch % cfg.mode.saving_checkpoints == 0:
             torch.save({'epoch': epoch, 'state_dict': model.state_dict(),
@@ -276,7 +338,7 @@ def train(cfg):
                        os.path.join(ckpt_dir, f'checkpoint_{epoch}.pth'))
 
     print(f'\nDone. Best score:{best_score:.4f} RMSE:{best_rmse:.4f} ABS:{best_abs_rel:.4f}')
-    wandb.finish()
+    # wandb.finish()
 
 
 if __name__ == '__main__':
@@ -295,6 +357,8 @@ if __name__ == '__main__':
     p.add_argument('--hist-weight', type=float, default=None)
     p.add_argument('--kl-weight', type=float, default=None)
     p.add_argument('--foa-consistency-weight', type=float, default=None)
+    p.add_argument('--rotate-canonical', action='store_true',
+                   help='Rotate FOA into a canonical listener frame (dataset_rotated.py).')
     args = p.parse_args()
 
     cfg = load_config(config_name=args.config, mode='train',
@@ -312,6 +376,7 @@ if __name__ == '__main__':
     if args.hist_weight is not None:  cfg.model.hist_weight = args.hist_weight
     if args.kl_weight is not None:    cfg.model.kl_weight = args.kl_weight
     if args.foa_consistency_weight is not None: cfg.model.foa_consistency_weight = args.foa_consistency_weight
+    if args.rotate_canonical: cfg.dataset.rotate_canonical = True
 
     print('=' * 60)
     print(f'Model: {cfg.model.name}  Dataset: {cfg.dataset.name}')

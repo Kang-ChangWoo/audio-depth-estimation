@@ -1,0 +1,72 @@
+============================================================
+Model: foa_channelattn  Dataset: soundspaces
+BS: 32  LR: 0.001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Model: foa_channelattn (55.1M params)
+/opt/conda/lib/python3.9/site-packages/torch/nn/parallel/_functions.py:71: UserWarning: Was asked to gather along dimension 0, but all input tensors were scalars; will instead unsqueeze and return a vector.
+  warnings.warn(
+Epoch [1/40] L:0.3042 D:0.2635 F:0.0746 H:0.3319 KL:0.0100 154s
+Epoch [2/40] L:0.2640 D:0.2265 F:0.0523 H:0.3222 KL:0.0113 158s
+Epoch [3/40] L:0.2536 D:0.2161 F:0.0468 H:0.3275 KL:0.0109 157s
+Epoch [4/40] L:0.2458 D:0.2076 F:0.0453 H:0.3351 KL:0.0137 157s
+  Val L:0.2879 ABS:0.4433 RMSE:1.3403 d1:0.4677
+  >> Best (score:1.0712 RMSE:1.3403 ABS:0.4433)
+Epoch [5/40] L:0.2361 D:0.1976 F:0.0425 H:0.3415 KL:0.0129 157s
+Epoch [6/40] L:0.2305 D:0.1919 F:0.0411 H:0.3442 KL:0.0117 156s
+Epoch [7/40] L:0.2253 D:0.1876 F:0.0411 H:0.3351 KL:0.0102 156s
+Epoch [8/40] L:0.2210 D:0.1840 F:0.0397 H:0.3290 KL:0.0111 156s
+  Val L:0.2704 ABS:0.3948 RMSE:1.3055 d1:0.5037
+  >> Best (score:1.0323 RMSE:1.3055 ABS:0.3948)
+Epoch [9/40] L:0.2174 D:0.1808 F:0.0390 H:0.3263 KL:0.0111 155s
+Epoch [10/40] L:0.2140 D:0.1775 F:0.0381 H:0.3258 KL:0.0092 155s
+Epoch [11/40] L:0.2101 D:0.1739 F:0.0378 H:0.3237 KL:0.0091 154s
+Epoch [12/40] L:0.2059 D:0.1705 F:0.0371 H:0.3164 KL:0.0089 155s
+  Val L:0.2572 ABS:0.3909 RMSE:1.2621 d1:0.5067
+  >> Best (score:1.0008 RMSE:1.2621 ABS:0.3909)
+Epoch [13/40] L:0.2007 D:0.1659 F:0.0370 H:0.3103 KL:0.0075 157s
+Epoch [14/40] L:0.1951 D:0.1610 F:0.0363 H:0.3036 KL:0.0082 156s
+Epoch [15/40] L:0.1903 D:0.1567 F:0.0358 H:0.2993 KL:0.0078 155s
+Epoch [16/40] L:0.1849 D:0.1516 F:0.0353 H:0.2962 KL:0.0080 156s
+  Val L:0.2662 ABS:0.4277 RMSE:1.2571 d1:0.4967
+Epoch [17/40] L:0.1801 D:0.1472 F:0.0349 H:0.2941 KL:0.0069 155s
+Epoch [18/40] L:0.1734 D:0.1409 F:0.0343 H:0.2899 KL:0.0066 155s
+Epoch [19/40] L:0.1682 D:0.1360 F:0.0338 H:0.2879 KL:0.0069 155s
+Epoch [20/40] L:0.1623 D:0.1304 F:0.0333 H:0.2841 KL:0.0071 155s
+  Val L:0.2657 ABS:0.3968 RMSE:1.2527 d1:0.5247
+  >> Best (score:0.9960 RMSE:1.2527 ABS:0.3968)
+Epoch [21/40] L:0.1567 D:0.1252 F:0.0332 H:0.2812 KL:0.0073 155s
+Epoch [22/40] L:0.1510 D:0.1199 F:0.0328 H:0.2775 KL:0.0066 155s
+Epoch [23/40] L:0.1458 D:0.1149 F:0.0331 H:0.2748 KL:0.0063 155s
+Epoch [24/40] L:0.1395 D:0.1091 F:0.0323 H:0.2706 KL:0.0062 156s
+  Val L:0.2774 ABS:0.4097 RMSE:1.2700 d1:0.5188
+Epoch [25/40] L:0.1339 D:0.1041 F:0.0318 H:0.2655 KL:0.0062 154s
+Epoch [26/40] L:0.1290 D:0.0995 F:0.0313 H:0.2630 KL:0.0060 154s
+Epoch [27/40] L:0.1248 D:0.0956 F:0.0312 H:0.2601 KL:0.0062 156s
+Epoch [28/40] L:0.1203 D:0.0915 F:0.0311 H:0.2570 KL:0.0061 156s
+  Val L:0.2723 ABS:0.4235 RMSE:1.2658 d1:0.5349
+Epoch [29/40] L:0.1163 D:0.0878 F:0.0307 H:0.2536 KL:0.0058 156s
+Epoch [30/40] L:0.1124 D:0.0842 F:0.0304 H:0.2507 KL:0.0058 156s
+Epoch [31/40] L:0.1090 D:0.0810 F:0.0302 H:0.2490 KL:0.0056 155s
+Epoch [32/40] L:0.1055 D:0.0778 F:0.0299 H:0.2470 KL:0.0056 156s
+  Val L:0.2818 ABS:0.4057 RMSE:1.2909 d1:0.5289
+Epoch [33/40] L:0.1029 D:0.0754 F:0.0298 H:0.2449 KL:0.0054 155s
+Epoch [34/40] L:0.0997 D:0.0724 F:0.0295 H:0.2432 KL:0.0054 156s
+Epoch [35/40] L:0.0968 D:0.0696 F:0.0294 H:0.2416 KL:0.0053 156s
+Epoch [36/40] L:0.0946 D:0.0675 F:0.0292 H:0.2415 KL:0.0053 156s
+  Val L:0.2818 ABS:0.4389 RMSE:1.2956 d1:0.5284
+Epoch [37/40] L:0.0922 D:0.0653 F:0.0289 H:0.2400 KL:0.0052 156s
+Epoch [38/40] L:0.0904 D:0.0635 F:0.0285 H:0.2396 KL:0.0052 156s
+Epoch [39/40] L:0.0893 D:0.0623 F:0.0286 H:0.2408 KL:0.0051 156s
+Epoch [40/40] L:0.0860 D:0.0594 F:0.0284 H:0.2371 KL:0.0051 154s
+  Val L:0.2885 ABS:0.4482 RMSE:1.3164 d1:0.5234
+
+Done. Best score:0.9960 RMSE:1.2527 ABS:0.3968

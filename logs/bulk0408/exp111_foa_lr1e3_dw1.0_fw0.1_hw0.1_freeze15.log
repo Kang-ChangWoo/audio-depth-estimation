@@ -1,0 +1,114 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from WANDB_API_KEY.
+wandb: Currently logged in as: branden to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run nhsbflhk
+wandb: Tracking run with wandb version 0.25.1
+wandb: Run data is saved locally in /root/storage/implementation/shared_audio/baseline/wandb/run-20260411_090628-nhsbflhk
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run unet_256_soundspaces_BS32_Lr0.001_AdamW_exp111_foa_lr1e3_dw1.0_fw0.1_hw0.1_freeze15
+wandb: ⭐️ View project at https://wandb.ai/branden/neurips_audio_depth
+wandb: 🚀 View run at https://wandb.ai/branden/neurips_audio_depth/runs/nhsbflhk
+============================================================
+Model: audio_depth_foa  Dataset: soundspaces
+BS: 32  LR: 0.001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples from 72 scenes (filtered 5240 with >10% no-depth) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples from 9 scenes (filtered 592 with >10% no-depth) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Model: audio_depth_foa (55.0M params)
+  [Warmup] SH branch frozen for 15 epochs
+Epoch [1/40] L:0.2528 D:0.2528 192s
+Epoch [2/40] L:0.2184 D:0.2184 228s
+Epoch [3/40] L:0.2084 D:0.2084 192s
+Epoch [4/40] L:0.1969 D:0.1969 208s
+  Val L:0.2374 ABS:0.4196 RMSE:1.3138 d1:0.4867
+  >> Best (score:1.0455 RMSE:1.3138 ABS:0.4196)
+Epoch [5/40] L:0.1913 D:0.1913 193s
+Epoch [6/40] L:0.1869 D:0.1869 205s
+Epoch [7/40] L:0.1823 D:0.1823 189s
+Epoch [8/40] L:0.1794 D:0.1794 196s
+  Val L:0.2220 ABS:0.4012 RMSE:1.2503 d1:0.5068
+  >> Best (score:0.9956 RMSE:1.2503 ABS:0.4012)
+Epoch [9/40] L:0.1761 D:0.1761 189s
+Epoch [10/40] L:0.1727 D:0.1727 192s
+Epoch [11/40] L:0.1696 D:0.1696 199s
+Epoch [12/40] L:0.1657 D:0.1657 199s
+  Val L:0.2210 ABS:0.3906 RMSE:1.2503 d1:0.5175
+  >> Best (score:0.9924 RMSE:1.2503 ABS:0.3906)
+Epoch [13/40] L:0.1624 D:0.1624 183s
+Epoch [14/40] L:0.1587 D:0.1587 186s
+Epoch [15/40] L:0.1546 D:0.1546 186s
+  [Warmup done] SH branch unfrozen
+Epoch [16/40] L:0.2009 D:0.1527 F:0.0666 H:0.4155 KL:0.0000 194s
+  Val L:0.2694 ABS:0.4144 RMSE:1.2390 d1:0.5225
+  >> Best (score:0.9916 RMSE:1.2390 ABS:0.4144)
+Epoch [17/40] L:0.1886 D:0.1479 F:0.0468 H:0.3606 KL:0.0000 173s
+Epoch [18/40] L:0.1803 D:0.1433 F:0.0429 H:0.3275 KL:0.0000 171s
+Epoch [19/40] L:0.1730 D:0.1384 F:0.0397 H:0.3064 KL:0.0000 181s
+Epoch [20/40] L:0.1678 D:0.1341 F:0.0378 H:0.2991 KL:0.0000 177s
+  Val L:0.2672 ABS:0.3948 RMSE:1.2724 d1:0.5208
+Epoch [21/40] L:0.1615 D:0.1284 F:0.0367 H:0.2949 KL:0.0000 176s
+Epoch [22/40] L:0.1567 D:0.1242 F:0.0354 H:0.2894 KL:0.0000 179s
+Epoch [23/40] L:0.1509 D:0.1191 F:0.0344 H:0.2844 KL:0.0000 177s
+Epoch [24/40] L:0.1451 D:0.1140 F:0.0333 H:0.2778 KL:0.0000 176s
+  Val L:0.2705 ABS:0.4329 RMSE:1.2590 d1:0.5323
+Epoch [25/40] L:0.1402 D:0.1094 F:0.0324 H:0.2752 KL:0.0000 172s
+Epoch [26/40] L:0.1346 D:0.1042 F:0.0320 H:0.2716 KL:0.0000 188s
+Epoch [27/40] L:0.1293 D:0.0995 F:0.0314 H:0.2667 KL:0.0000 296s
+Epoch [28/40] L:0.1247 D:0.0953 F:0.0308 H:0.2633 KL:0.0000 406s
+  Val L:0.2804 ABS:0.4261 RMSE:1.2825 d1:0.5272
+Epoch [29/40] L:0.1198 D:0.0907 F:0.0303 H:0.2600 KL:0.0000 358s
+Epoch [30/40] L:0.1164 D:0.0877 F:0.0298 H:0.2574 KL:0.0000 528s
+Epoch [31/40] L:0.1115 D:0.0831 F:0.0292 H:0.2544 KL:0.0000 420s
+Epoch [32/40] L:0.1081 D:0.0800 F:0.0286 H:0.2520 KL:0.0000 333s
+  Val L:0.2837 ABS:0.4342 RMSE:1.3003 d1:0.5351
+Epoch [33/40] L:0.1054 D:0.0775 F:0.0285 H:0.2503 KL:0.0000 443s
+Epoch [34/40] L:0.1017 D:0.0742 F:0.0283 H:0.2471 KL:0.0000 592s
+Epoch [35/40] L:0.0981 D:0.0708 F:0.0277 H:0.2449 KL:0.0000 490s
+Epoch [36/40] L:0.0956 D:0.0686 F:0.0274 H:0.2435 KL:0.0000 378s
+  Val L:0.2797 ABS:0.4466 RMSE:1.2978 d1:0.5359
+Epoch [37/40] L:0.0927 D:0.0659 F:0.0275 H:0.2408 KL:0.0000 435s
+Epoch [38/40] L:0.0904 D:0.0636 F:0.0268 H:0.2405 KL:0.0000 363s
+Epoch [39/40] L:0.0881 D:0.0616 F:0.0264 H:0.2383 KL:0.0000 389s
+Epoch [40/40] L:0.0861 D:0.0597 F:0.0266 H:0.2369 KL:0.0000 704s
+wandb: updating run metadata
+wandb: uploading summary, console lines 56-57
+wandb: 
+wandb: Run history:
+wandb: best/abs_rel █▄▁▇
+wandb:   best/epoch ▁▃▆█
+wandb:    best/rmse █▂▂▁
+wandb:   best/score █▂▁▁
+wandb:        epoch ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:  train/depth █▇▆▆▆▆▅▅▅▅▅▅▅▅▄▄▄▄▄▄▃▃▃▃▃▃▂▂▂▂▂▂▂▂▁▁▁▁▁▁
+wandb:    train/foa █▅▄▃▃▃▃▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁
+wandb:   train/hist █▆▅▄▃▃▃▃▃▃▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁
+wandb:     train/kl ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   train/loss █▇▆▆▅▅▅▅▅▅▅▄▄▄▄▆▅▅▅▄▄▄▄▃▃▃▃▃▂▂▂▂▂▂▂▁▁▁▁▁
+wandb:           +8 ...
+wandb: 
+wandb: Run summary:
+wandb: best/abs_rel 0.41445
+wandb:   best/epoch 16
+wandb:    best/rmse 1.239
+wandb:   best/score 0.99163
+wandb:        epoch 40
+wandb:  train/depth 0.0597
+wandb:    train/foa 0.02664
+wandb:   train/hist 0.23692
+wandb:     train/kl 0
+wandb:   train/loss 0.08605
+wandb:           +8 ...
+wandb: 
+wandb: 🚀 View run unet_256_soundspaces_BS32_Lr0.001_AdamW_exp111_foa_lr1e3_dw1.0_fw0.1_hw0.1_freeze15 at: https://wandb.ai/branden/neurips_audio_depth/runs/nhsbflhk
+wandb: ⭐️ View project at: https://wandb.ai/branden/neurips_audio_depth
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20260411_090628-nhsbflhk/logs
+  Val L:0.2920 ABS:0.4353 RMSE:1.3249 d1:0.5287
+
+Done. Best score:0.9916 RMSE:1.2390 ABS:0.4144

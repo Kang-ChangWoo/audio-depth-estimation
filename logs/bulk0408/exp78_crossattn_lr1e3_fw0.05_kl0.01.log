@@ -1,0 +1,20 @@
+============================================================
+Model: foa_crossattn  Dataset: soundspaces
+BS: 32  LR: 0.001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples from 72 scenes (filtered 5240 with >10% no-depth) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples from 9 scenes (filtered 592 with >10% no-depth) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Model: foa_crossattn (56.3M params)
+/opt/conda/lib/python3.11/site-packages/torch/nn/parallel/_functions.py:71: UserWarning: Was asked to gather along dimension 0, but all input tensors were scalars; will instead unsqueeze and return a vector.
+  warnings.warn(
+Epoch [1/40] L:0.2999 D:0.2582 F:0.1165 H:0.3464 KL:0.1310 4849s
+Epoch [2/40] L:0.2587 D:0.2219 F:0.0669 H:0.3286 KL:0.0650 5156s
+Epoch [3/40] L:0.2499 D:0.2129 F:0.0552 H:0.3366 KL:0.0573 491s
+Epoch [4/40] L:0.2407 D:0.2028 F:0.0475 H:0.3495 KL:0.0620 125s
