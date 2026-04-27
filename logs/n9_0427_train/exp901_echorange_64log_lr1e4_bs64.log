@@ -1,0 +1,76 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+============================================================
+Model: echorange  Dataset: soundspaces
+BS: 64  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_c7ed256fbb9b.json) [waveform=ON]
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_89df6a83b017.json) [waveform=ON]
+Train: 23560, Val: 2951
+Loading weights:   0%|          | 0/210 [00:00<?, ?it/s]Loading weights: 100%|██████████| 210/210 [00:00<00:00, 5366.04it/s]
+[1mWav2Vec2Model LOAD REPORT[0m from: facebook/wav2vec2-base-960h
+Key               | Status     | 
+------------------+------------+-
+lm_head.weight    | UNEXPECTED | 
+lm_head.bias      | UNEXPECTED | 
+masked_spec_embed | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+Model: echorange (132.7M params)
+Traceback (most recent call last):
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 1228, in <module>
+    train(cfg)
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 973, in train
+    s = _train_step_echorange(model, batch, criterion, optimizer,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 74, in _train_step_echorange
+    out = model(audio, waveform)
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/parallel/data_parallel.py", line 194, in forward
+    outputs = self.parallel_apply(replicas, inputs, module_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/parallel/data_parallel.py", line 213, in parallel_apply
+    return parallel_apply(
+           ^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/parallel/parallel_apply.py", line 129, in parallel_apply
+    output.reraise()
+  File "/opt/conda/lib/python3.11/site-packages/torch/_utils.py", line 769, in reraise
+    raise exception
+torch.OutOfMemoryError: Caught OutOfMemoryError in replica 0 on device 0.
+Original Traceback (most recent call last):
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/parallel/parallel_apply.py", line 99, in _worker
+    output = module(*input, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/storage/implementation/shared_audio/baseline/models/bin_based/echorange.py", line 108, in forward
+    out = self.range_head(feat)
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/storage/implementation/shared_audio/baseline/models/bin_based/range_head.py", line 94, in forward
+    entropy = -(prob * log_p).sum(dim=1, keepdim=True) / math.log(self.num_bins)
+                ~~~~~^~~~~~~
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 256.00 MiB. GPU 0 has a total capacity of 23.52 GiB of which 191.38 MiB is free. Process 6204 has 15.30 GiB memory in use. Including non-PyTorch memory, this process has 8.00 GiB memory in use. Of the allocated memory 7.22 GiB is allocated by PyTorch, and 227.61 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+

@@ -19,3 +19,12 @@ exp358,vit_lr_divergence,report_f Finding 3,vit_baseline lr=5e-4 — catastrophi
 old_high_FOA_L1,foa_eval_pre_fix,report_f Finding 6,Any pre-fix FOA evaluator output where FOA_L1 in [0.3 0.6] range,Audit and rerun before publishing
 exp78,incomplete_training,report_1_cleaning_exp,FOA crossattn — stalled at 4/40 epochs,Removed checkpoint per cleaning report 2026-04-16
 js_variants,accidentally_removed_ckpt,report_1_cleaning_exp,feat_attn_foa_v2_js / foa_basic_js / foa_v2_js / sh_coeff_hierarch_foa_v2_js / full_run_foa_v2_js / full_run_foa,Need retraining per cleaning report
+exp163_v2,deleted_bad_perf_2sigma,docs/EXPERIMENT_NARRATIVE.md §6,pvitfoav2 lr=5e-5 w=0.3 RMSE=1.2099 — pvitfoa family 2sigma+ outlier (best 1.0820 std 0.0136 thr 1.1092),Artifacts deleted 2026-04-27 (results+logs); exp163_v1 row preserved
+exp165,deleted_bad_perf_2sigma,docs/EXPERIMENT_NARRATIVE.md §6,pvitfoav3 lr=5e-5 w=0.3 RMSE=1.1140 — pvitfoa family 2sigma+ outlier,Artifacts deleted 2026-04-27 (results+logs)
+exp207,deleted_bad_perf_2sigma,docs/EXPERIMENT_NARRATIVE.md §6,n3_eattn bs=32 RMSE=1.1000 — Group H re-tune (refuted in report_d as worse than BS=128 default),Artifacts deleted 2026-04-27 (ckpt+results+logs)
+exp209,deleted_bad_perf_2sigma,docs/EXPERIMENT_NARRATIVE.md §6,n3_eattn freeze=15 RMSE=1.0931 — Group H re-tune refuted,Artifacts deleted 2026-04-27 (ckpt+results+logs)
+exp211,deleted_bad_perf_2sigma,docs/EXPERIMENT_NARRATIVE.md §6,n3_eattn dw=2 lambda_energy=0.3 RMSE=1.1036 — Group H re-tune refuted,Artifacts deleted 2026-04-27 (ckpt+results+logs)
+exp220,deleted_bad_perf_2sigma,docs/EXPERIMENT_NARRATIVE.md §6,pvit_freeze20 RMSE=1.1287 — singleton outlier,Artifacts deleted 2026-04-27 (ckpt+results+logs)
+exp229,deleted_bad_perf_2sigma,docs/EXPERIMENT_NARRATIVE.md §6,n3_mssh_eattn sh9 lambda_sh=0.3 RMSE=1.1013 — Group K9 attempt did not break frontier,Artifacts deleted 2026-04-27 (ckpt+results+logs)
+exp397_n9_0424,deleted_bad_perf_2sigma,docs/EXPERIMENT_NARRATIVE.md §6,n9_0424 (C lsh=0.1) RMSE=1.2489 — n9_0424 family 2sigma+ outlier; family already archived line,Artifacts deleted 2026-04-27 (ckpt+results+logs)
+exp401_n9_0424,deleted_bad_perf_2sigma,docs/EXPERIMENT_NARRATIVE.md §6,n9_0424 (C lsh=0.05) RMSE=1.2606 — worst n9_0424 cell; exp401 n4_0425 BEST cell (RMSE 1.2013) and exp401 n2_temap ORACLE preserved separately,Artifacts deleted 2026-04-27 (ckpt+results+logs); exp401 n4_0425 + exp401 n2_temap rows preserved
