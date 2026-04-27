@@ -1,0 +1,87 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: renew_single  Dataset: soundspaces
+BS: 32  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Model: renew_single (183.8M params)
+  [LR] cosine schedule enabled  warmup=1ep (737 steps), total=29480 steps
+  [Renew] both ViT encoders frozen for 3 epochs (heads/neck/decoder trainable)
+Epoch [1/40] L:0.4262 D:0.3539 F:0.0872 326s
+Epoch [2/40] L:0.2911 D:0.2399 F:0.0429 348s
+  Val L:0.2894 ABS:0.5047 RMSE:1.3890 d1:0.4310
+  >> Best (score:1.1237 RMSE:1.3890 ABS:0.5047)
+Epoch [3/40] L:0.2784 D:0.2309 F:0.0400 354s
+  [Renew] ViT encoders unfrozen at epoch 4
+Epoch [4/40] L:0.2768 D:0.2312 F:0.0459 371s
+  Val L:0.2767 ABS:0.4165 RMSE:1.4143 d1:0.4465
+  >> Best (score:1.1149 RMSE:1.4143 ABS:0.4165)
+Epoch [5/40] L:0.2448 D:0.2050 F:0.0342 380s
+Epoch [6/40] L:0.2326 D:0.1941 F:0.0312 340s
+  Val L:0.2416 ABS:0.4448 RMSE:1.2809 d1:0.4898
+  >> Best (score:1.0300 RMSE:1.2809 ABS:0.4448)
+Epoch [7/40] L:0.2245 D:0.1868 F:0.0290 372s
+Epoch [8/40] L:0.2179 D:0.1810 F:0.0273 417s
+  Val L:0.2345 ABS:0.4091 RMSE:1.2787 d1:0.5082
+  >> Best (score:1.0178 RMSE:1.2787 ABS:0.4091)
+Epoch [9/40] L:0.2115 D:0.1752 F:0.0257 356s
+Epoch [10/40] L:0.2069 D:0.1709 F:0.0249 343s
+  Val L:0.2302 ABS:0.4251 RMSE:1.2457 d1:0.5164
+  >> Best (score:0.9995 RMSE:1.2457 ABS:0.4251)
+Epoch [11/40] L:0.2009 D:0.1654 F:0.0240 343s
+Epoch [12/40] L:0.1958 D:0.1605 F:0.0234 335s
+  Val L:0.2364 ABS:0.3857 RMSE:1.2655 d1:0.5200
+Epoch [13/40] L:0.1890 D:0.1541 F:0.0228 385s
+Epoch [14/40] L:0.1813 D:0.1466 F:0.0222 361s
+  Val L:0.2413 ABS:0.3562 RMSE:1.2841 d1:0.5240
+Epoch [15/40] L:0.1742 D:0.1398 F:0.0215 363s
+Epoch [16/40] L:0.1664 D:0.1323 F:0.0210 389s
+  Val L:0.2318 ABS:0.3937 RMSE:1.2463 d1:0.5352
+  >> Best (score:0.9905 RMSE:1.2463 ABS:0.3937)
+Epoch [17/40] L:0.1588 D:0.1249 F:0.0204 392s
+Epoch [18/40] L:0.1513 D:0.1176 F:0.0200 363s
+  Val L:0.2397 ABS:0.4032 RMSE:1.2523 d1:0.5323
+Epoch [19/40] L:0.1440 D:0.1105 F:0.0193 354s
+Epoch [20/40] L:0.1376 D:0.1044 F:0.0188 361s
+  Val L:0.2430 ABS:0.4126 RMSE:1.2556 d1:0.5380
+Epoch [21/40] L:0.1317 D:0.0987 F:0.0182 400s
+Epoch [22/40] L:0.1261 D:0.0933 F:0.0177 393s
+  Val L:0.2464 ABS:0.4143 RMSE:1.2694 d1:0.5362
+Epoch [23/40] L:0.1209 D:0.0883 F:0.0172 443s
+Epoch [24/40] L:0.1162 D:0.0839 F:0.0166 422s
+  Val L:0.2419 ABS:0.4242 RMSE:1.2595 d1:0.5392
+Epoch [25/40] L:0.1118 D:0.0797 F:0.0161 510s
+Epoch [26/40] L:0.1079 D:0.0760 F:0.0156 612s
+  Val L:0.2459 ABS:0.4306 RMSE:1.2698 d1:0.5397
+Epoch [27/40] L:0.1045 D:0.0727 F:0.0150 549s
+Epoch [28/40] L:0.1012 D:0.0697 F:0.0146 447s
+  Val L:0.2498 ABS:0.4328 RMSE:1.2869 d1:0.5377
+Epoch [29/40] L:0.0984 D:0.0670 F:0.0141 639s
+Epoch [30/40] L:0.0958 D:0.0646 F:0.0135 635s
+  Val L:0.2519 ABS:0.4301 RMSE:1.2934 d1:0.5352
+Epoch [31/40] L:0.0935 D:0.0625 F:0.0131 658s
+Epoch [32/40] L:0.0915 D:0.0606 F:0.0127 494s
+  Val L:0.2539 ABS:0.4398 RMSE:1.3063 d1:0.5387
+Epoch [33/40] L:0.0898 D:0.0591 F:0.0123 590s
+Epoch [34/40] L:0.0883 D:0.0578 F:0.0119 490s
+  Val L:0.2544 ABS:0.4352 RMSE:1.3065 d1:0.5359
+Epoch [35/40] L:0.0872 D:0.0567 F:0.0116 709s
+Epoch [36/40] L:0.0863 D:0.0560 F:0.0113 651s
+  Val L:0.2583 ABS:0.4408 RMSE:1.3225 d1:0.5348
+Epoch [37/40] L:0.0857 D:0.0554 F:0.0111 527s
+Epoch [38/40] L:0.0853 D:0.0550 F:0.0110 409s
+  Val L:0.2583 ABS:0.4418 RMSE:1.3222 d1:0.5352
+Epoch [39/40] L:0.0850 D:0.0548 F:0.0109 523s
+Epoch [40/40] L:0.0849 D:0.0547 F:0.0108 493s
+  Val L:0.2591 ABS:0.4421 RMSE:1.3249 d1:0.5352
+
+Done. Best score:0.9905 RMSE:1.2463 ABS:0.3937

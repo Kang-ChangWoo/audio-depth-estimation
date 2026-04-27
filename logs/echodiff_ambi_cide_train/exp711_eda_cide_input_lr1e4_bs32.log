@@ -1,0 +1,345 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/opt/conda/lib/python3.11/site-packages/torch/cuda/__init__.py:829: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+============================================================
+Model: echodiffusion_ambi  Dataset: soundspaces
+BS: 12  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON] [waveform=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON] [waveform=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Loading weights:   0%|          | 0/210 [00:00<?, ?it/s]Loading weights: 100%|██████████| 210/210 [00:00<00:00, 5069.37it/s]
+[1mWav2Vec2Model LOAD REPORT[0m from: facebook/wav2vec2-base-960h
+Key               | Status     | 
+------------------+------------+-
+lm_head.weight    | UNEXPECTED | 
+lm_head.bias      | UNEXPECTED | 
+masked_spec_embed | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+/opt/conda/lib/python3.11/site-packages/torch/cuda/__init__.py:829: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+  [echodiff_ambi] foa_mode=input K=8 spec_in=3 use_cide=True gate_learnable=True
+Model: echodiffusion_ambi (132.6M params)
+  [train] epoch 1 step 392/1964 (112s)
+  [train] epoch 1 step 784/1964 (222s)
+  [train] epoch 1 step 1176/1964 (332s)
+  [train] epoch 1 step 1568/1964 (441s)
+  [train] epoch 1 step 1960/1964 (551s)
+Epoch [1/40] L:0.3263 D:0.2827 F:0.0000 552s
+  [train] epoch 2 step 392/1964 (110s)
+  [train] epoch 2 step 784/1964 (220s)
+  [train] epoch 2 step 1176/1964 (330s)
+  [train] epoch 2 step 1568/1964 (439s)
+  [train] epoch 2 step 1960/1964 (549s)
+Epoch [2/40] L:0.2573 D:0.2144 F:0.0000 550s
+  [train] epoch 3 step 392/1964 (110s)
+  [train] epoch 3 step 784/1964 (221s)
+  [train] epoch 3 step 1176/1964 (331s)
+  [train] epoch 3 step 1568/1964 (440s)
+  [train] epoch 3 step 1960/1964 (549s)
+Epoch [3/40] L:0.2492 D:0.2071 F:0.0000 550s
+  [train] epoch 4 step 392/1964 (110s)
+  [train] epoch 4 step 784/1964 (219s)
+  [train] epoch 4 step 1176/1964 (329s)
+  [train] epoch 4 step 1568/1964 (439s)
+  [train] epoch 4 step 1960/1964 (549s)
+Epoch [4/40] L:0.2445 D:0.2032 F:0.0000 550s
+  [val] starting (246 batches)
+  [val] 50/246 (9s)
+  [val] 100/246 (18s)
+  [val] 150/246 (27s)
+  [val] 200/246 (36s)
+  [val] done (246 batches, 44s)
+  Val L:0.2468 ABS:0.4397 RMSE:1.4149 d1:0.4863
+  >> Best (score:1.1224 RMSE:1.4149 ABS:0.4397)
+  [train] epoch 5 step 392/1964 (110s)
+  [train] epoch 5 step 784/1964 (221s)
+  [train] epoch 5 step 1176/1964 (330s)
+  [train] epoch 5 step 1568/1964 (440s)
+  [train] epoch 5 step 1960/1964 (551s)
+Epoch [5/40] L:0.2414 D:0.2011 F:0.0000 552s
+  [train] epoch 6 step 392/1964 (111s)
+  [train] epoch 6 step 784/1964 (221s)
+  [train] epoch 6 step 1176/1964 (331s)
+  [train] epoch 6 step 1568/1964 (440s)
+  [train] epoch 6 step 1960/1964 (550s)
+Epoch [6/40] L:0.2372 D:0.1979 F:0.0000 551s
+  [train] epoch 7 step 392/1964 (110s)
+  [train] epoch 7 step 784/1964 (220s)
+  [train] epoch 7 step 1176/1964 (330s)
+  [train] epoch 7 step 1568/1964 (440s)
+  [train] epoch 7 step 1960/1964 (550s)
+Epoch [7/40] L:0.2336 D:0.1954 F:0.0000 551s
+  [train] epoch 8 step 392/1964 (110s)
+  [train] epoch 8 step 784/1964 (220s)
+  [train] epoch 8 step 1176/1964 (330s)
+  [train] epoch 8 step 1568/1964 (440s)
+  [train] epoch 8 step 1960/1964 (550s)
+Epoch [8/40] L:0.2309 D:0.1938 F:0.0000 551s
+  [val] starting (246 batches)
+  [val] 50/246 (9s)
+  [val] 100/246 (18s)
+  [val] 150/246 (27s)
+  [val] 200/246 (36s)
+  [val] done (246 batches, 44s)
+  Val L:0.2548 ABS:0.3709 RMSE:1.4553 d1:0.4664
+  [train] epoch 9 step 392/1964 (110s)
+  [train] epoch 9 step 784/1964 (220s)
+  [train] epoch 9 step 1176/1964 (330s)
+  [train] epoch 9 step 1568/1964 (440s)
+  [train] epoch 9 step 1960/1964 (550s)
+Epoch [9/40] L:0.2278 D:0.1919 F:0.0000 551s
+  [train] epoch 10 step 392/1964 (110s)
+  [train] epoch 10 step 784/1964 (220s)
+  [train] epoch 10 step 1176/1964 (330s)
+  [train] epoch 10 step 1568/1964 (440s)
+  [train] epoch 10 step 1960/1964 (550s)
+Epoch [10/40] L:0.2241 D:0.1894 F:0.0000 551s
+  [train] epoch 11 step 392/1964 (111s)
+  [train] epoch 11 step 784/1964 (221s)
+  [train] epoch 11 step 1176/1964 (330s)
+  [train] epoch 11 step 1568/1964 (441s)
+  [train] epoch 11 step 1960/1964 (551s)
+Epoch [11/40] L:0.2211 D:0.1877 F:0.0000 552s
+  [train] epoch 12 step 392/1964 (110s)
+  [train] epoch 12 step 784/1964 (220s)
+  [train] epoch 12 step 1176/1964 (330s)
+  [train] epoch 12 step 1568/1964 (440s)
+  [train] epoch 12 step 1960/1964 (550s)
+Epoch [12/40] L:0.2180 D:0.1859 F:0.0000 551s
+  [val] starting (246 batches)
+  [val] 50/246 (9s)
+  [val] 100/246 (18s)
+  [val] 150/246 (27s)
+  [val] 200/246 (36s)
+  [val] done (246 batches, 44s)
+  Val L:0.2376 ABS:0.3749 RMSE:1.4149 d1:0.4978
+  >> Best (score:1.1029 RMSE:1.4149 ABS:0.3749)
+  [train] epoch 13 step 392/1964 (111s)
+  [train] epoch 13 step 784/1964 (221s)
+  [train] epoch 13 step 1176/1964 (331s)
+  [train] epoch 13 step 1568/1964 (441s)
+  [train] epoch 13 step 1960/1964 (551s)
+Epoch [13/40] L:0.2146 D:0.1839 F:0.0000 552s
+  [train] epoch 14 step 392/1964 (111s)
+  [train] epoch 14 step 784/1964 (221s)
+  [train] epoch 14 step 1176/1964 (331s)
+  [train] epoch 14 step 1568/1964 (441s)
+  [train] epoch 14 step 1960/1964 (551s)
+Epoch [14/40] L:0.2110 D:0.1817 F:0.0000 552s
+  [train] epoch 15 step 392/1964 (110s)
+  [train] epoch 15 step 784/1964 (220s)
+  [train] epoch 15 step 1176/1964 (330s)
+  [train] epoch 15 step 1568/1964 (441s)
+  [train] epoch 15 step 1960/1964 (551s)
+Epoch [15/40] L:0.2077 D:0.1797 F:0.0000 552s
+  [train] epoch 16 step 392/1964 (111s)
+  [train] epoch 16 step 784/1964 (221s)
+  [train] epoch 16 step 1176/1964 (331s)
+  [train] epoch 16 step 1568/1964 (441s)
+  [train] epoch 16 step 1960/1964 (551s)
+Epoch [16/40] L:0.2049 D:0.1782 F:0.0000 552s
+  [val] starting (246 batches)
+  [val] 50/246 (9s)
+  [val] 100/246 (18s)
+  [val] 150/246 (27s)
+  [val] 200/246 (36s)
+  [val] done (246 batches, 44s)
+  Val L:0.2346 ABS:0.3834 RMSE:1.4081 d1:0.5133
+  >> Best (score:1.1007 RMSE:1.4081 ABS:0.3834)
+  [train] epoch 17 step 392/1964 (110s)
+  [train] epoch 17 step 784/1964 (220s)
+  [train] epoch 17 step 1176/1964 (330s)
+  [train] epoch 17 step 1568/1964 (440s)
+  [train] epoch 17 step 1960/1964 (550s)
+Epoch [17/40] L:0.2024 D:0.1770 F:0.0000 551s
+  [train] epoch 18 step 392/1964 (110s)
+  [train] epoch 18 step 784/1964 (220s)
+  [train] epoch 18 step 1176/1964 (330s)
+  [train] epoch 18 step 1568/1964 (440s)
+  [train] epoch 18 step 1960/1964 (550s)
+Epoch [18/40] L:0.1996 D:0.1753 F:0.0000 551s
+  [train] epoch 19 step 392/1964 (110s)
+  [train] epoch 19 step 784/1964 (220s)
+  [train] epoch 19 step 1176/1964 (330s)
+  [train] epoch 19 step 1568/1964 (440s)
+  [train] epoch 19 step 1960/1964 (550s)
+Epoch [19/40] L:0.1971 D:0.1739 F:0.0000 551s
+  [train] epoch 20 step 392/1964 (110s)
+  [train] epoch 20 step 784/1964 (220s)
+  [train] epoch 20 step 1176/1964 (330s)
+  [train] epoch 20 step 1568/1964 (440s)
+  [train] epoch 20 step 1960/1964 (551s)
+Epoch [20/40] L:0.1941 D:0.1720 F:0.0000 552s
+  [val] starting (246 batches)
+  [val] 50/246 (9s)
+  [val] 100/246 (18s)
+  [val] 150/246 (27s)
+  [val] 200/246 (36s)
+  [val] done (246 batches, 44s)
+  Val L:0.2331 ABS:0.3819 RMSE:1.3766 d1:0.5168
+  >> Best (score:1.0782 RMSE:1.3766 ABS:0.3819)
+  [train] epoch 21 step 392/1964 (111s)
+  [train] epoch 21 step 784/1964 (221s)
+  [train] epoch 21 step 1176/1964 (331s)
+  [train] epoch 21 step 1568/1964 (441s)
+  [train] epoch 21 step 1960/1964 (552s)
+Epoch [21/40] L:0.1913 D:0.1701 F:0.0000 553s
+  [train] epoch 22 step 392/1964 (110s)
+  [train] epoch 22 step 784/1964 (221s)
+  [train] epoch 22 step 1176/1964 (330s)
+  [train] epoch 22 step 1568/1964 (440s)
+  [train] epoch 22 step 1960/1964 (551s)
+Epoch [22/40] L:0.1889 D:0.1686 F:0.0000 552s
+  [train] epoch 23 step 392/1964 (110s)
+  [train] epoch 23 step 784/1964 (221s)
+  [train] epoch 23 step 1176/1964 (331s)
+  [train] epoch 23 step 1568/1964 (441s)
+  [train] epoch 23 step 1960/1964 (551s)
+Epoch [23/40] L:0.1857 D:0.1663 F:0.0000 552s
+  [train] epoch 24 step 392/1964 (111s)
+  [train] epoch 24 step 784/1964 (221s)
+  [train] epoch 24 step 1176/1964 (331s)
+  [train] epoch 24 step 1568/1964 (441s)
+  [train] epoch 24 step 1960/1964 (551s)
+Epoch [24/40] L:0.1835 D:0.1649 F:0.0000 552s
+  [val] starting (246 batches)
+  [val] 50/246 (10s)
+  [val] 100/246 (19s)
+  [val] 150/246 (28s)
+  [val] 200/246 (37s)
+  [val] done (246 batches, 45s)
+  Val L:0.2353 ABS:0.3831 RMSE:1.3836 d1:0.5214
+  [train] epoch 25 step 392/1964 (110s)
+  [train] epoch 25 step 784/1964 (221s)
+  [train] epoch 25 step 1176/1964 (331s)
+  [train] epoch 25 step 1568/1964 (441s)
+  [train] epoch 25 step 1960/1964 (551s)
+Epoch [25/40] L:0.1799 D:0.1620 F:0.0000 552s
+  [train] epoch 26 step 392/1964 (110s)
+  [train] epoch 26 step 784/1964 (220s)
+  [train] epoch 26 step 1176/1964 (330s)
+  [train] epoch 26 step 1568/1964 (441s)
+  [train] epoch 26 step 1960/1964 (551s)
+Epoch [26/40] L:0.1769 D:0.1597 F:0.0000 552s
+  [train] epoch 27 step 392/1964 (111s)
+  [train] epoch 27 step 784/1964 (221s)
+  [train] epoch 27 step 1176/1964 (331s)
+  [train] epoch 27 step 1568/1964 (441s)
+  [train] epoch 27 step 1960/1964 (551s)
+Epoch [27/40] L:0.1750 D:0.1584 F:0.0000 552s
+  [train] epoch 28 step 392/1964 (111s)
+  [train] epoch 28 step 784/1964 (221s)
+  [train] epoch 28 step 1176/1964 (330s)
+  [train] epoch 28 step 1568/1964 (441s)
+  [train] epoch 28 step 1960/1964 (551s)
+Epoch [28/40] L:0.1719 D:0.1559 F:0.0000 552s
+  [val] starting (246 batches)
+  [val] 50/246 (10s)
+  [val] 100/246 (19s)
+  [val] 150/246 (28s)
+  [val] 200/246 (37s)
+  [val] done (246 batches, 45s)
+  Val L:0.2440 ABS:0.4177 RMSE:1.3874 d1:0.5237
+  [train] epoch 29 step 392/1964 (111s)
+  [train] epoch 29 step 784/1964 (221s)
+  [train] epoch 29 step 1176/1964 (331s)
+  [train] epoch 29 step 1568/1964 (441s)
+  [train] epoch 29 step 1960/1964 (551s)
+Epoch [29/40] L:0.1685 D:0.1530 F:0.0000 552s
+  [train] epoch 30 step 392/1964 (110s)
+  [train] epoch 30 step 784/1964 (220s)
+  [train] epoch 30 step 1176/1964 (330s)
+  [train] epoch 30 step 1568/1964 (441s)
+  [train] epoch 30 step 1960/1964 (551s)
+Epoch [30/40] L:0.1657 D:0.1507 F:0.0000 552s
+  [train] epoch 31 step 392/1964 (110s)
+  [train] epoch 31 step 784/1964 (220s)
+  [train] epoch 31 step 1176/1964 (330s)
+  [train] epoch 31 step 1568/1964 (441s)
+  [train] epoch 31 step 1960/1964 (551s)
+Epoch [31/40] L:0.1630 D:0.1484 F:0.0000 552s
+  [train] epoch 32 step 392/1964 (110s)
+  [train] epoch 32 step 784/1964 (220s)
+  [train] epoch 32 step 1176/1964 (330s)
+  [train] epoch 32 step 1568/1964 (440s)
+  [train] epoch 32 step 1960/1964 (551s)
+Epoch [32/40] L:0.1599 D:0.1457 F:0.0000 552s
+  [val] starting (246 batches)
+  [val] 50/246 (10s)
+  [val] 100/246 (19s)
+  [val] 150/246 (28s)
+  [val] 200/246 (36s)
+  [val] done (246 batches, 45s)
+  Val L:0.2452 ABS:0.3828 RMSE:1.4024 d1:0.5226
+  [train] epoch 33 step 392/1964 (110s)
+  [train] epoch 33 step 784/1964 (221s)
+  [train] epoch 33 step 1176/1964 (330s)
+  [train] epoch 33 step 1568/1964 (440s)
+  [train] epoch 33 step 1960/1964 (550s)
+Epoch [33/40] L:0.1571 D:0.1433 F:0.0000 551s
+  [train] epoch 34 step 392/1964 (111s)
+  [train] epoch 34 step 784/1964 (221s)
+  [train] epoch 34 step 1176/1964 (331s)
+  [train] epoch 34 step 1568/1964 (441s)
+  [train] epoch 34 step 1960/1964 (551s)
+Epoch [34/40] L:0.1540 D:0.1406 F:0.0000 552s
+  [train] epoch 35 step 392/1964 (110s)
+  [train] epoch 35 step 784/1964 (220s)
+  [train] epoch 35 step 1176/1964 (331s)
+  [train] epoch 35 step 1568/1964 (441s)
+  [train] epoch 35 step 1960/1964 (551s)
+Epoch [35/40] L:0.1517 D:0.1386 F:0.0000 552s
+  [train] epoch 36 step 392/1964 (110s)
+  [train] epoch 36 step 784/1964 (221s)
+  [train] epoch 36 step 1176/1964 (331s)
+  [train] epoch 36 step 1568/1964 (441s)
+  [train] epoch 36 step 1960/1964 (551s)
+Epoch [36/40] L:0.1487 D:0.1359 F:0.0000 552s
+  [val] starting (246 batches)
+  [val] 50/246 (10s)
+  [val] 100/246 (19s)
+  [val] 150/246 (28s)
+  [val] 200/246 (37s)
+  [val] done (246 batches, 45s)
+  Val L:0.2494 ABS:0.4219 RMSE:1.4014 d1:0.5280
+Traceback (most recent call last):
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 1068, in <module>
+    if args.n3_checkpoint is not None:
+    ^^^^^^^^^^
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 906, in train
+    save_batch_visualization(vis_p, vis_g, vis_path, epoch,
+  File "/root/storage/implementation/shared_audio/baseline/utils/visualization.py", line 95, in save_batch_visualization
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+  File "/opt/conda/lib/python3.11/site-packages/matplotlib/pyplot.py", line 1250, in savefig
+    res = fig.savefig(*args, **kwargs)  # type: ignore[func-returns-value]
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/matplotlib/figure.py", line 3490, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+  File "/opt/conda/lib/python3.11/site-packages/matplotlib/backend_bases.py", line 2186, in print_figure
+    result = print_method(
+             ^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/matplotlib/backend_bases.py", line 2042, in <lambda>
+    print_method = functools.wraps(meth)(lambda *args, **kwargs: meth(
+                                                                 ^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/matplotlib/backends/backend_agg.py", line 481, in print_png
+    self._print_pil(filename_or_obj, "png", pil_kwargs, metadata)
+  File "/opt/conda/lib/python3.11/site-packages/matplotlib/backends/backend_agg.py", line 430, in _print_pil
+    mpl.image.imsave(
+  File "/opt/conda/lib/python3.11/site-packages/matplotlib/image.py", line 1657, in imsave
+    image.save(fname, **pil_kwargs)
+  File "/opt/conda/lib/python3.11/site-packages/PIL/Image.py", line 2600, in save
+    fp = builtins.open(filename, "w+b")
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 28] No space left on device: '/root/storage/implementation/shared_audio/baseline/results/echodiffusion_ambi_soundspaces_BS12_Lr0.0001_AdamW_exp711_eda_cide_input_lr1e4_bs32/epoch_0036_val.png'

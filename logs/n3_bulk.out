@@ -1,0 +1,15 @@
+============================================================
+n3_bulk.sh — 9 experiments, 5 workers (GPUs 0-9)
+Fri Apr 17 17:23:07 Asia 2026
+============================================================
+Worker 0 launched (GPU 0,1, PID 21049)
+Worker 1 launched (GPU 2,3, PID 21050)
+Worker 2 launched (GPU 4,5, PID 21051)
+Worker 3 launched (GPU 6,7, PID 21053)
+Worker 4 launched (GPU 8,9, PID 21057)
+All 5 workers running. Waiting...
+[17:23:07] [GPU=0,1] TRAIN exp178_oracle_nc3_lr1e3_lsh0.1 (config=foa_oracle_nc3 lr=0.001 lsh=0.1)
+[17:23:07] [GPU=4,5] TRAIN exp180_oracle_nc3_lr1e3_lsh0.3 (config=foa_oracle_nc3 lr=0.001 lsh=0.3)
+[17:23:07] [GPU=6,7] TRAIN exp181_oracle_nc1_lr1e3_lsh0.1 (config=foa_oracle_nc1 lr=0.001 lsh=0.1)
+[17:23:07] [GPU=2,3] TRAIN exp179_oracle_nc3_lr5e4_lsh0.1 (config=foa_oracle_nc3 lr=0.0005 lsh=0.1)
+[17:23:07] [GPU=8,9] TRAIN exp182_oracle_nc1_lr5e4_lsh0.1 (config=foa_oracle_nc1 lr=0.0005 lsh=0.1)

@@ -1,0 +1,56 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: n3_0425  Dataset: soundspaces
+BS: 128  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Model: n3_0425 (19.8M params)
+Epoch [1/20] L:0.0769 81s
+Epoch [2/20] L:0.0342 81s
+Epoch [3/20] L:0.0299 81s
+Epoch [4/20] L:0.0236 80s
+  [val] starting (24 batches)
+  [val] done (24 batches, 11s)
+  Val L:0.0050 ABS:0.0050 RMSE:0.0050 d1:0.8486
+  >> Best (score:0.0050 RMSE:0.0050 ABS:0.0050)
+Epoch [5/20] L:0.0188 81s
+Epoch [6/20] L:0.0149 85s
+Epoch [7/20] L:0.0147 80s
+Epoch [8/20] L:0.0132 79s
+  [val] starting (24 batches)
+  [val] done (24 batches, 12s)
+  Val L:0.0040 ABS:0.0040 RMSE:0.0040 d1:0.8407
+  >> Best (score:0.0040 RMSE:0.0040 ABS:0.0040)
+Epoch [9/20] L:0.0119 79s
+Epoch [10/20] L:0.0115 81s
+Epoch [11/20] L:0.0111 80s
+Epoch [12/20] L:0.0096 80s
+  [val] starting (24 batches)
+  [val] done (24 batches, 12s)
+  Val L:0.0045 ABS:0.0045 RMSE:0.0045 d1:0.8082
+Epoch [13/20] L:0.0087 79s
+Epoch [14/20] L:0.0076 80s
+Epoch [15/20] L:0.0073 79s
+Epoch [16/20] L:0.0070 79s
+  [val] starting (24 batches)
+  [val] done (24 batches, 12s)
+  Val L:0.0045 ABS:0.0045 RMSE:0.0045 d1:0.8284
+Epoch [17/20] L:0.0072 78s
+Epoch [18/20] L:0.0055 79s
+Epoch [19/20] L:0.0053 80s
+Epoch [20/20] L:0.0057 80s
+  [val] starting (24 batches)
+  [val] done (24 batches, 11s)
+  Val L:0.0031 ABS:0.0031 RMSE:0.0031 d1:0.8711
+  >> Best (score:0.0031 RMSE:0.0031 ABS:0.0031)
+
+Done. Best score:0.0031 RMSE:0.0031 ABS:0.0031

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Train FOA model
+# Train FOA_v2_js_rgb model (RGB teacher-guided with feature alignment)
 set -euo pipefail
 
 # ── Parameters ──
@@ -20,12 +20,14 @@ echo "  GPUs:        $GPUS"
 echo "  Experiment:  $EXPERIMENT"
 echo "  Epochs:      $EPOCHS"
 echo "  Workers:     $NUM_WORKERS"
+echo "  Config:      foa_v2_js_rgb"
 echo "  Log:         $LOG_FILE"
 echo "============================================================"
 
 CUDA_VISIBLE_DEVICES="$GPUS" python3 train.py \
-    --config foa_v2_js \
-    --experiment-name "${EXPERIMENT}_foa_v2_js" \
+    --config foa_v2_js_rgb \
+    --experiment-name "${EXPERIMENT}_foa_v2_js_rgb" \
     --epochs "$EPOCHS" \
+    --batch-size 12 \
     --num-workers "$NUM_WORKERS" \
     2>&1 | tee "$LOG_FILE"

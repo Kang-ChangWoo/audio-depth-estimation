@@ -1,0 +1,73 @@
+# ============================================================
+# n4_0425 — Binaural UNet + oracle bin-gated FOA conditioning.
+#
+# See docs/experiment_plan_bin_selection.md and
+# models/n4_0425/n4_0425.py.
+#
+# Pipeline:  spec ─► UNet enc ─► bottleneck ⊕ MLP(g ⊙ rep_gt) ─► UNet dec ─► depth.
+# rep_gt is the oracle per-bin FOA representative produced by
+# data/dataset.py when use_distance_bins=true (5-tuple batch).
+# Sparsity loss `lambda_sparsity * sigmoid(gate).mean()` is applied
+# inside _train_step_foa_0415 when the model emits 'gate'.
+# ============================================================
+dataset:
+  name: soundspaces
+  dataset_dir: /root/storage/matterport3d_0303renew
+  split_ratio: [0.8, 0.1, 0.1]
+  split_seed: 42
+  input_type: echoes
+  audio_format: spectrogram
+  depth_type: erp
+  preprocess: resize
+  depth_norm: true
+  images_size: [256, 512]
+  min_depth: 0.01
+  max_depth: 10.0
+  use_ambisonic: true
+  rotate_canonical: true
+  depth_dir: erp_depth_radial
+  # 5-tuple batch (audio, depth, foa_target, energy_map, rep_gt) is required.
+  # rep_gt: (8, 4) per-bin FOA representatives — fed as oracle to the model.
+  use_distance_bins: true
+  gt_energy_window: early_mid
+
+model:
+  name: n4_0425
+  generator: n4_0425
+  # Routes through _PVITFOA_CLASSES branch in build_model; n4_0425 ignores
+  # the ViT-specific kwargs (pretrained, freeze_encoder) via **_unused.
+  pretrained: false
+  freeze_encoder: false
+  # n4_0425 knobs.
+  K: 8                    # distance-bin count; must match dataset rep_gt.
+  ngf: 64                 # UNet width (8*ngf = 512 bottleneck channels).
+  gate_init: 2.0          # sigmoid(2.0) ≈ 0.88 — gate starts near "use all bins".
+  # Auxiliary loss weights.
+  depth_weight: 1.0
+  lambda_sh: 0.0          # rep_pred = rep_gt * gate is redundant — don't supervise.
+  lambda_sparsity: 0.1    # weight on sigmoid(gate).mean() (sparsity prior).
+  # Energy map is an INPUT (oracle, multi-scale parallel encoder), no longer
+  # a supervision target. lambda_energy=0 keeps the supervision branch off.
+  lambda_energy: 0.0
+
+train:
+  checkpoints: null
+  saving_checkpoints: 10
+  epochs: 40
+  learning_rate: 0.0001
+  optimizer: AdamW
+  validation: true
+  validation_iter: 4
+  num_threads: 4
+  batch_size: 64
+  shuffle: true
+  use_berhu: true
+  use_silog: true
+  w_berhu: 1.0
+  w_silog: 0.5
+
+test:
+  eval_on: test
+  checkpoints: best
+  num_threads: 4
+  batch_size: 4

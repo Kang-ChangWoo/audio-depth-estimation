@@ -1,0 +1,93 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: n9_0425  Dataset: soundspaces
+BS: 256  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+  [n9_0425] n3 ckpt loaded cleanly from /root/storage/implementation/shared_audio/baseline/checkpoints/n3_0425_soundspaces_BS128_Lr0.0001_AdamW_exp503_n3_eigen8_lr1e4_bs128/best_model.pth
+  [n9_0425] n3 trainable (gradients flow back through n3)
+Model: n9_0425 (93.8M params)
+Epoch [1/40] L:0.3642 D:0.2762 F:0.0084 61s
+Epoch [2/40] L:0.2846 D:0.1967 F:0.0166 56s
+Epoch [3/40] L:0.2664 D:0.1786 F:0.0223 56s
+Epoch [4/40] L:0.2480 D:0.1602 F:0.0282 56s
+  [val] starting (12 batches)
+  [val] done (12 batches, 13s)
+  Val L:0.2628 ABS:0.4143 RMSE:1.4682 d1:0.4912
+  >> Best (score:1.1520 RMSE:1.4682 ABS:0.4143)
+Epoch [5/40] L:0.2290 D:0.1413 F:0.0332 56s
+Epoch [6/40] L:0.2136 D:0.1260 F:0.0378 56s
+Epoch [7/40] L:0.2027 D:0.1152 F:0.0415 56s
+Epoch [8/40] L:0.1932 D:0.1058 F:0.0443 56s
+  [val] starting (12 batches)
+  [val] done (12 batches, 12s)
+  Val L:0.2489 ABS:0.4031 RMSE:1.4404 d1:0.5105
+  >> Best (score:1.1292 RMSE:1.4404 ABS:0.4031)
+Epoch [9/40] L:0.1876 D:0.1003 F:0.0462 56s
+Epoch [10/40] L:0.1830 D:0.0958 F:0.0485 56s
+Epoch [11/40] L:0.1786 D:0.0915 F:0.0514 56s
+Epoch [12/40] L:0.1755 D:0.0884 F:0.0534 56s
+  [val] starting (12 batches)
+  [val] done (12 batches, 13s)
+  Val L:0.2597 ABS:0.4249 RMSE:1.4573 d1:0.5146
+Epoch [13/40] L:0.1721 D:0.0851 F:0.0550 56s
+Epoch [14/40] L:0.1709 D:0.0841 F:0.0576 56s
+Epoch [15/40] L:0.1686 D:0.0818 F:0.0583 56s
+Epoch [16/40] L:0.1672 D:0.0805 F:0.0596 56s
+  [val] starting (12 batches)
+  [val] done (12 batches, 13s)
+  Val L:0.2538 ABS:0.4271 RMSE:1.4408 d1:0.5159
+Epoch [17/40] L:0.1657 D:0.0791 F:0.0621 56s
+Epoch [18/40] L:0.1649 D:0.0785 F:0.0650 56s
+Epoch [19/40] L:0.1636 D:0.0773 F:0.0662 55s
+Epoch [20/40] L:0.1623 D:0.0760 F:0.0690 56s
+  [val] starting (12 batches)
+  [val] done (12 batches, 13s)
+  Val L:0.2467 ABS:0.4114 RMSE:1.4230 d1:0.5247
+  >> Best (score:1.1195 RMSE:1.4230 ABS:0.4114)
+Epoch [21/40] L:0.1611 D:0.0749 F:0.0704 56s
+Epoch [22/40] L:0.1603 D:0.0743 F:0.0720 56s
+Epoch [23/40] L:0.1596 D:0.0736 F:0.0737 56s
+Epoch [24/40] L:0.1583 D:0.0725 F:0.0747 55s
+  [val] starting (12 batches)
+  [val] done (12 batches, 13s)
+  Val L:0.2605 ABS:0.4304 RMSE:1.4701 d1:0.5228
+Epoch [25/40] L:0.1586 D:0.0729 F:0.0767 56s
+Epoch [26/40] L:0.1577 D:0.0721 F:0.0793 56s
+Epoch [27/40] L:0.1572 D:0.0716 F:0.0810 55s
+Epoch [28/40] L:0.1557 D:0.0703 F:0.0831 56s
+  [val] starting (12 batches)
+  [val] done (12 batches, 13s)
+  Val L:0.2590 ABS:0.4080 RMSE:1.4688 d1:0.5165
+Epoch [29/40] L:0.1546 D:0.0693 F:0.0841 55s
+Epoch [30/40] L:0.1539 D:0.0687 F:0.0856 56s
+Epoch [31/40] L:0.1530 D:0.0679 F:0.0863 55s
+Epoch [32/40] L:0.1528 D:0.0679 F:0.0874 56s
+  [val] starting (12 batches)
+  [val] done (12 batches, 13s)
+  Val L:0.2511 ABS:0.4039 RMSE:1.4492 d1:0.5172
+Epoch [33/40] L:0.1523 D:0.0675 F:0.0888 56s
+Epoch [34/40] L:0.1521 D:0.0674 F:0.0905 56s
+Epoch [35/40] L:0.1507 D:0.0661 F:0.0920 56s
+Epoch [36/40] L:0.1507 D:0.0662 F:0.0924 55s
+  [val] starting (12 batches)
+  [val] done (12 batches, 13s)
+  Val L:0.2538 ABS:0.4280 RMSE:1.4443 d1:0.5261
+Epoch [37/40] L:0.1502 D:0.0658 F:0.0943 55s
+Epoch [38/40] L:0.1495 D:0.0652 F:0.0958 56s
+Epoch [39/40] L:0.1492 D:0.0650 F:0.0970 56s
+Epoch [40/40] L:0.1492 D:0.0652 F:0.0993 56s
+  [val] starting (12 batches)
+  [val] done (12 batches, 13s)
+  Val L:0.2593 ABS:0.4222 RMSE:1.4789 d1:0.5217
+
+Done. Best score:1.1195 RMSE:1.4230 ABS:0.4114

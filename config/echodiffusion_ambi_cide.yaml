@@ -1,0 +1,73 @@
+# ============================================================
+# echodiffusion_ambi_cide — EchoDiffusionAmbi + CIDE/Wav2Vec2 conditioning.
+#
+# Adds the CIDE waveform-conditioning branch (binaural waveform → Wav2Vec2 →
+# 100-class softmax → embedding) on top of the bin-gated FOA conditioning.
+# Cross-attention context becomes:
+#   foa_mode='input'      → CIDE token (B, 1, 768) — FOA via spec input concat.
+#   foa_mode='condition'  → [CIDE; bin_proj(rep)] = (B, 1+K, 768)
+#
+# Dataset returns the 6-tuple (audio, depth, foa, energy_map, rep_gt, waveform)
+# because both use_waveform=True AND use_distance_bins=True are set.
+# ============================================================
+dataset:
+  name: soundspaces
+  dataset_dir: /root/storage/matterport3d_0303renew
+  split_ratio: [0.8, 0.1, 0.1]
+  split_seed: 42
+  input_type: echoes
+  audio_format: spectrogram
+  depth_type: erp
+  preprocess: resize
+  depth_norm: true
+  images_size: [256, 512]
+  min_depth: 0.01
+  max_depth: 10.0
+  use_ambisonic: true
+  rotate_canonical: true
+  depth_dir: erp_depth_radial
+  # 5-tuple base (audio, depth, foa, em, rep_gt) + waveform → 6-tuple.
+  use_distance_bins: true
+  rep_kind: eigen
+  rep_K: 8
+  gt_energy_window: early_mid
+  # CIDE branch: binaural waveform → Wav2Vec2.
+  use_waveform: true
+  waveform_len: 5648
+
+model:
+  name: echodiffusion_ambi
+  generator: echodiffusion_ambi
+  max_depth: 10.0
+  embed_dim: 192
+  emb_dim: 768
+  K: 8
+  foa_mode: condition       # 'input' or 'condition'; override per-exp
+  gate_init: 2.0
+  use_cide: true            # adds CIDE token to cross-attention context
+  depth_weight: 1.0
+  lambda_sh: 0.0
+  lambda_sparsity: 0.05
+  lambda_energy: 0.0
+
+train:
+  checkpoints: null
+  saving_checkpoints: 10
+  epochs: 40
+  learning_rate: 0.0005
+  optimizer: AdamW
+  validation: true
+  validation_iter: 4
+  num_threads: 4
+  batch_size: 64
+  shuffle: true
+  use_berhu: true
+  use_silog: true
+  w_berhu: 1.0
+  w_silog: 0.5
+
+test:
+  eval_on: test
+  checkpoints: best
+  num_threads: 4
+  batch_size: 4

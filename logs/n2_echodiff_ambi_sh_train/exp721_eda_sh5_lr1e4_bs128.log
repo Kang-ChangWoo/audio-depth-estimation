@@ -1,0 +1,104 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: echodiffusion_ambi_sh  Dataset: soundspaces
+BS: 128  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON] [waveform=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON] [waveform=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Loading weights:   0%|          | 0/210 [00:00<?, ?it/s]Loading weights: 100%|██████████| 210/210 [00:00<00:00, 5724.45it/s]
+[transformers] [1mWav2Vec2Model LOAD REPORT[0m from: facebook/wav2vec2-base-960h
+Key               | Status     | 
+------------------+------------+-
+lm_head.bias      | UNEXPECTED | 
+lm_head.weight    | UNEXPECTED | 
+masked_spec_embed | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+  [echodiff_ambi_sh] K=8 sh_order=5 C_sh=36  unet_ch=64  dec_ch=[256, 128, 64]  use_cide=True  total=167.92M  trainable=73.55M
+Model: echodiffusion_ambi_sh (167.9M params)
+/opt/conda/lib/python3.11/site-packages/torch/nn/modules/linear.py:125: UserWarning: Attempting to run cuBLAS, but there was no current CUDA context! Attempting to set the primary context... (Triggered internally at /pytorch/aten/src/ATen/cuda/CublasHandlePool.cpp:179.)
+  return F.linear(input, self.weight, self.bias)
+Epoch [1/40] L:0.5820 D:0.5820 F:0.0000 274s
+Epoch [2/40] L:0.2264 D:0.2264 F:0.0000 265s
+Epoch [3/40] L:0.2156 D:0.2156 F:0.0000 263s
+Epoch [4/40] L:0.2087 D:0.2087 F:0.0000 263s
+  [val] starting (24 batches)
+  [val] done (24 batches, 26s)
+  Val L:0.2438 ABS:0.4698 RMSE:1.4181 d1:0.4964
+  >> Best (score:1.1336 RMSE:1.4181 ABS:0.4698)
+Epoch [5/40] L:0.2049 D:0.2049 F:0.0000 264s
+Epoch [6/40] L:0.2001 D:0.2001 F:0.0000 264s
+Epoch [7/40] L:0.1974 D:0.1974 F:0.0000 264s
+Epoch [8/40] L:0.1933 D:0.1933 F:0.0000 265s
+  [val] starting (24 batches)
+  [val] done (24 batches, 27s)
+  Val L:0.2452 ABS:0.4871 RMSE:1.4321 d1:0.4823
+Epoch [9/40] L:0.1881 D:0.1881 F:0.0000 264s
+Epoch [10/40] L:0.1847 D:0.1847 F:0.0000 264s
+Epoch [11/40] L:0.1798 D:0.1798 F:0.0000 264s
+Epoch [12/40] L:0.1752 D:0.1752 F:0.0000 264s
+  [val] starting (24 batches)
+  [val] done (24 batches, 26s)
+  Val L:0.2357 ABS:0.4583 RMSE:1.3798 d1:0.5029
+  >> Best (score:1.1034 RMSE:1.3798 ABS:0.4583)
+Epoch [13/40] L:0.1695 D:0.1695 F:0.0000 265s
+Epoch [14/40] L:0.1638 D:0.1638 F:0.0000 264s
+Epoch [15/40] L:0.1573 D:0.1573 F:0.0000 265s
+Epoch [16/40] L:0.1523 D:0.1523 F:0.0000 265s
+  [val] starting (24 batches)
+  [val] done (24 batches, 26s)
+  Val L:0.2417 ABS:0.4468 RMSE:1.3920 d1:0.5312
+Epoch [17/40] L:0.1444 D:0.1444 F:0.0000 264s
+Epoch [18/40] L:0.1370 D:0.1370 F:0.0000 264s
+Epoch [19/40] L:0.1302 D:0.1302 F:0.0000 264s
+Epoch [20/40] L:0.1233 D:0.1233 F:0.0000 265s
+  [val] starting (24 batches)
+  [val] done (24 batches, 26s)
+  Val L:0.2490 ABS:0.4333 RMSE:1.4085 d1:0.5321
+Epoch [21/40] L:0.1196 D:0.1196 F:0.0000 265s
+Epoch [22/40] L:0.1150 D:0.1150 F:0.0000 264s
+Epoch [23/40] L:0.1130 D:0.1130 F:0.0000 264s
+Epoch [24/40] L:0.1074 D:0.1074 F:0.0000 264s
+  [val] starting (24 batches)
+  [val] done (24 batches, 26s)
+  Val L:0.2523 ABS:0.4441 RMSE:1.4162 d1:0.5178
+Epoch [25/40] L:0.1029 D:0.1029 F:0.0000 264s
+Epoch [26/40] L:0.1016 D:0.1016 F:0.0000 264s
+Epoch [27/40] L:0.0985 D:0.0985 F:0.0000 264s
+Epoch [28/40] L:0.0971 D:0.0971 F:0.0000 264s
+  [val] starting (24 batches)
+  [val] done (24 batches, 25s)
+  Val L:0.2650 ABS:0.4083 RMSE:1.4604 d1:0.5190
+Epoch [29/40] L:0.0952 D:0.0952 F:0.0000 263s
+Epoch [30/40] L:0.0926 D:0.0926 F:0.0000 264s
+Epoch [31/40] L:0.0912 D:0.0912 F:0.0000 263s
+Epoch [32/40] L:0.0877 D:0.0877 F:0.0000 263s
+  [val] starting (24 batches)
+  [val] done (24 batches, 26s)
+  Val L:0.2563 ABS:0.4502 RMSE:1.4381 d1:0.5267
+Epoch [33/40] L:0.0867 D:0.0867 F:0.0000 264s
+Epoch [34/40] L:0.0857 D:0.0857 F:0.0000 264s
+Epoch [35/40] L:0.0833 D:0.0833 F:0.0000 263s
+Epoch [36/40] L:0.0792 D:0.0792 F:0.0000 264s
+  [val] starting (24 batches)
+  [val] done (24 batches, 26s)
+  Val L:0.2613 ABS:0.4693 RMSE:1.4690 d1:0.5298
+Epoch [37/40] L:0.0780 D:0.0780 F:0.0000 264s
+Epoch [38/40] L:0.0779 D:0.0779 F:0.0000 264s
+Epoch [39/40] L:0.0787 D:0.0787 F:0.0000 265s
+Epoch [40/40] L:0.0781 D:0.0781 F:0.0000 263s
+  [val] starting (24 batches)
+  [val] done (24 batches, 26s)
+  Val L:0.2607 ABS:0.4842 RMSE:1.4492 d1:0.5245
+
+Done. Best score:1.1034 RMSE:1.3798 ABS:0.4583

@@ -1,0 +1,43 @@
+# n3_film — N3 Group C experiment
+dataset:
+  name: soundspaces
+  dataset_dir: /root/storage/matterport3d_0303renew
+  split_ratio: [0.8, 0.1, 0.1]
+  split_seed: 42
+  input_type: echoes
+  audio_format: spectrogram
+  depth_type: erp
+  preprocess: resize
+  depth_norm: true
+  images_size: [256, 512]
+  min_depth: 0.01
+  max_depth: 10.0
+  use_ambisonic: true
+  rotate_canonical: true
+model:
+  name: n3_film
+  generator: unet_256
+  sh_dim: 4
+  head_hidden: 256
+  depth_weight: 1.0
+  lambda_sh: 0.1
+train:
+  checkpoints: null
+  saving_checkpoints: 10
+  epochs: 60
+  learning_rate: 0.001
+  optimizer: AdamW
+  validation: true
+  validation_iter: 4
+  num_threads: 4
+  batch_size: 32
+  shuffle: true
+  use_berhu: true
+  use_silog: true
+  w_berhu: 1.0
+  w_silog: 1.0
+test:
+  eval_on: test
+  checkpoints: best
+  num_threads: 4
+  batch_size: 1

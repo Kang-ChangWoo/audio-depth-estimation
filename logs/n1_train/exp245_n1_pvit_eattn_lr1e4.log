@@ -1,0 +1,51 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: pvit_n1_temap_eattn  Dataset: soundspaces
+BS: 16  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+  N2 dataset: 3 temporal bins
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+  N2 dataset: 3 temporal bins
+Train: 23560, Val: 2951
+Model: pvit_n1_temap_eattn (101.7M params)
+Epoch [1/40] L:0.2683 D:0.2565 F:0.0324 1148s
+Epoch [2/40] L:0.1910 D:0.1846 F:0.0228 1026s
+Epoch [3/40] L:0.1824 D:0.1771 F:0.0196 1057s
+Epoch [4/40] L:0.1769 D:0.1723 F:0.0175 1297s
+  Val L:0.2241 ABS:0.4836 RMSE:1.2107 d1:0.5011
+  >> Best (score:0.9925 RMSE:1.2107 ABS:0.4836)
+Epoch [5/40] L:0.1722 D:0.1680 F:0.0163 1195s
+Epoch [6/40] L:0.1679 D:0.1640 F:0.0150 886s
+Epoch [7/40] L:0.1640 D:0.1603 F:0.0148 976s
+Epoch [8/40] L:0.1597 D:0.1561 F:0.0142 922s
+  Val L:0.2129 ABS:0.3874 RMSE:1.2092 d1:0.5290
+  >> Best (score:0.9627 RMSE:1.2092 ABS:0.3874)
+Epoch [9/40] L:0.1551 D:0.1516 F:0.0136 1141s
+Epoch [10/40] L:0.1504 D:0.1470 F:0.0134 1110s
+Epoch [11/40] L:0.1457 D:0.1423 F:0.0131 1068s
+Epoch [12/40] L:0.1400 D:0.1368 F:0.0127 1283s
+  Val L:0.2330 ABS:0.3978 RMSE:1.2417 d1:0.4998
+Epoch [13/40] L:0.1342 D:0.1311 F:0.0127 1448s
+Epoch [14/40] L:0.1287 D:0.1257 F:0.0125 876s
+Epoch [15/40] L:0.1229 D:0.1199 F:0.0122 1334s
+Epoch [16/40] L:0.1173 D:0.1144 F:0.0120 6789s
+  Val L:0.2292 ABS:0.3902 RMSE:1.2426 d1:0.5359
+Epoch [17/40] L:0.1121 D:0.1092 F:0.0118 5965s
+Epoch [18/40] L:0.1067 D:0.1039 F:0.0115 5925s
+Epoch [19/40] L:0.1014 D:0.0987 F:0.0114 7715s
+Epoch [20/40] L:0.0957 D:0.0930 F:0.0112 12068s
+  Val L:0.2354 ABS:0.4372 RMSE:1.2573 d1:0.5324
+Epoch [21/40] L:0.0916 D:0.0890 F:0.0111 5352s
+Epoch [22/40] L:0.0866 D:0.0840 F:0.0108 3293s
+Epoch [23/40] L:0.0821 D:0.0795 F:0.0106 4909s
+Epoch [24/40] L:0.0783 D:0.0758 F:0.0104 4251s
+  Val L:0.2431 ABS:0.4148 RMSE:1.2815 d1:0.5348
+Epoch [25/40] L:0.0751 D:0.0727 F:0.0103 5095s

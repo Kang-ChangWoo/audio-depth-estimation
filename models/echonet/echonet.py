@@ -227,7 +227,7 @@ class EchoNet(nn.Module):
     """
 
     def __init__(self, cfg, input_nc=2, output_nc=1,
-                 conv1x1_dim=8, bottleneck_dim=512):
+                 conv1x1_dim=8, bottleneck_dim=64):
         super().__init__()
         self.output_size = tuple(int(s) for s in cfg.dataset.images_size)
         self.max_depth = getattr(cfg.dataset, 'max_depth', 10.0)
@@ -240,6 +240,8 @@ class EchoNet(nn.Module):
             output_size=self.output_size)
         self.visual_net = VisualSubNet(ngf=64, input_nc=3, output_nc=output_nc)
         self.material_net = MaterialSubNet(n_class=23)
+        self.proj_img = nn.Conv2d(512, bottleneck_dim, 1)
+        self.proj_mat = nn.Conv2d(512, bottleneck_dim, 1)
         self.fusion = MultimodalFusion(feat_dim=bottleneck_dim)
         self.attention_net = AttentionSubNet(input_nc=bottleneck_dim * 2)
         self.apply(_weights_init)
@@ -253,6 +255,8 @@ class EchoNet(nn.Module):
         img_depth, img_feat = self.visual_net(zero_img)
         _, mat_feat = self.material_net(zero_img)
 
+        img_feat = self.proj_img(img_feat)
+        mat_feat = self.proj_mat(mat_feat)
         echo_feat_spatial = echo_feat.expand(-1, -1, img_feat.shape[2], img_feat.shape[3])
         fused = self.fusion(img_feat, echo_feat_spatial, mat_feat)
         alpha = self.attention_net(fused)

@@ -1,0 +1,64 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: echodiffusion  Eval: test
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[test] 3192 samples (fast cache: samples_test_erp_e2314b68a4f5.json) [waveform=ON]
+Eval [test]: 3192 samples
+Loading weights:   0%|          | 0/210 [00:00<?, ?it/s]Loading weights: 100%|██████████| 210/210 [00:00<00:00, 6161.02it/s]
+[transformers] [1mWav2Vec2Model LOAD REPORT[0m from: facebook/wav2vec2-base-960h
+Key               | Status     | 
+------------------+------------+-
+lm_head.weight    | UNEXPECTED | 
+lm_head.bias      | UNEXPECTED | 
+masked_spec_embed | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+Loading: checkpoints/echodiffusion_soundspaces_BS48_Lr1e-05_AdamW_exp364_echodiff_lr1e5_bs48/best_model.pth
+Loaded epoch 20
+  10/200 (160 samples)
+  20/200 (320 samples)
+  30/200 (480 samples)
+  40/200 (640 samples)
+  50/200 (800 samples)
+  60/200 (960 samples)
+  70/200 (1120 samples)
+  80/200 (1280 samples)
+  90/200 (1440 samples)
+  100/200 (1600 samples)
+  110/200 (1760 samples)
+  120/200 (1920 samples)
+  130/200 (2080 samples)
+  140/200 (2240 samples)
+  150/200 (2400 samples)
+  160/200 (2560 samples)
+  170/200 (2720 samples)
+  180/200 (2880 samples)
+  190/200 (3040 samples)
+  200/200 (3192 samples)
+
+============================================================
+ ABS_REL: 0.4675
+    RMSE: 1.3055
+  Delta1: 0.4788
+  Delta2: 0.6866
+  Delta3: 0.8116
+   Log10: 0.1674
+     MAE: 0.8330
+============================================================
+Saved stats: /root/storage/implementation/shared_audio/baseline/eval/soundspaces/test/stats_exp364_echodiff_lr1e5_bs48.pt
+Generating visualizations (0 per scene)...
+  8WUmhLawc2A: 0 images -> merged/ gt_depth/ pred_depth/
+  EDJbREhghzL: 0 images -> merged/ gt_depth/ pred_depth/
+  HxpKQynjfin: 0 images -> merged/ gt_depth/ pred_depth/
+  Z6MFQCViBuw: 0 images -> merged/ gt_depth/ pred_depth/
+  gTV8FGcVJC9: 0 images -> merged/ gt_depth/ pred_depth/
+  pLe4wQe7qrG: 0 images -> merged/ gt_depth/ pred_depth/
+  q9vSo1VnCiC: 0 images -> merged/ gt_depth/ pred_depth/
+  sT4fr6TAbpF: 0 images -> merged/ gt_depth/ pred_depth/
+  uNb9QFRL6hY: 0 images -> merged/ gt_depth/ pred_depth/
+Saved 0 samples (0 files) to /root/storage/implementation/shared_audio/baseline/results/echodiffusion_soundspaces_BS48_Lr1e-05_AdamW_exp364_echodiff_lr1e5_bs48/test/

@@ -1,0 +1,41 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: batvision  Dataset: soundspaces
+BS: 96  LR: 0.002  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_c7ed256fbb9b.json)
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_89df6a83b017.json)
+Train: 23560, Val: 2951
+Model: batvision (54.4M params)
+  [train] epoch 1 step 200/246 (178s)
+Epoch [1/40] L:0.2668 D:0.2668 218s
+  [train] epoch 2 step 200/246 (173s)
+Epoch [2/40] L:0.2306 D:0.2306 212s
+  [train] epoch 3 step 200/246 (173s)
+Epoch [3/40] L:0.2220 D:0.2220 213s
+  [train] epoch 4 step 200/246 (172s)
+Epoch [4/40] L:0.2178 D:0.2178 211s
+  [val] starting (31 batches)
+  [val] done (31 batches, 18s)
+  Val L:0.2682 ABS:0.5182 RMSE:1.4713 d1:0.4457
+  >> Best (score:1.1854 RMSE:1.4713 ABS:0.5182)
+  [train] epoch 5 step 200/246 (173s)
+Epoch [5/40] L:0.2102 D:0.2102 212s
+  [train] epoch 6 step 200/246 (173s)
+Epoch [6/40] L:0.2016 D:0.2016 212s
+  [train] epoch 7 step 200/246 (175s)
+Epoch [7/40] L:0.1964 D:0.1964 214s
+  [train] epoch 8 step 200/246 (175s)
+Epoch [8/40] L:0.1926 D:0.1926 215s
+  [val] starting (31 batches)
+  [val] done (31 batches, 18s)
+  Val L:0.2519 ABS:0.3914 RMSE:1.4599 d1:0.4885
+  >> Best (score:1.1394 RMSE:1.4599 ABS:0.3914)
+  [train] epoch 9 step 200/246 (174s)
+Epoch [9/40] L:0.1900 D:0.1900 213s
+  [train] epoch 10 step 200/246 (175s)

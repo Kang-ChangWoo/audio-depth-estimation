@@ -1,0 +1,77 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/opt/conda/lib/python3.11/site-packages/torch/functional.py:554: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4322.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+============================================================
+Model: foa_v2_js_rgb  Dataset: soundspaces
+BS: 12  LR: 0.001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+	-> Encoder is pretrained from: https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_large_patch4_window7_224_22k.pth
+Loading pretrained info: _IncompatibleKeys(missing_keys=['norm0.weight', 'norm0.bias', 'norm1.weight', 'norm1.bias', 'norm2.weight', 'norm2.bias', 'norm3.weight', 'norm3.bias'], unexpected_keys=['norm.weight', 'norm.bias', 'head.weight', 'head.bias', 'layers.0.blocks.1.attn_mask', 'layers.1.blocks.1.attn_mask', 'layers.2.blocks.1.attn_mask', 'layers.2.blocks.3.attn_mask', 'layers.2.blocks.5.attn_mask', 'layers.2.blocks.7.attn_mask', 'layers.2.blocks.9.attn_mask', 'layers.2.blocks.11.attn_mask', 'layers.2.blocks.13.attn_mask', 'layers.2.blocks.15.attn_mask', 'layers.2.blocks.17.attn_mask'])
+Model: foa_v2_js_rgb (286.1M params)
+/opt/conda/lib/python3.11/site-packages/torch/nn/parallel/_functions.py:71: UserWarning: Was asked to gather along dimension 0, but all input tensors were scalars; will instead unsqueeze and return a vector.
+  warnings.warn(
+Epoch [1/40] L:1.7673 D:1.4383 F:0.1548 ALN:3.1352 2282s
+Epoch [2/40] L:1.1402 D:0.1523 F:0.0479 ALN:9.8317 2285s
+Epoch [3/40] L:1.5772 D:0.1088 F:0.0353 ALN:14.6487 2287s
+Epoch [4/40] L:1.7365 D:0.0874 F:0.0330 ALN:16.4576 2287s
+  Val L:0.3747 ABS:0.4585 RMSE:1.7575 d1:0.1964
+  >> Best (score:1.3678 RMSE:1.7575 ABS:0.4585)
+Epoch [5/40] L:1.8046 D:0.0753 F:0.0318 ALN:17.2609 2282s
+Epoch [6/40] L:1.8293 D:0.0667 F:0.0310 ALN:17.5946 2283s
+Epoch [7/40] L:1.8372 D:0.0596 F:0.0304 ALN:17.7458 2285s
+Epoch [8/40] L:1.8141 D:0.0540 F:0.0299 ALN:17.5707 2282s
+  Val L:0.3309 ABS:0.4701 RMSE:1.6249 d1:0.1835
+  >> Best (score:1.2785 RMSE:1.6249 ABS:0.4701)
+Epoch [9/40] L:1.7880 D:0.0498 F:0.0292 ALN:17.3533 2284s
+Epoch [10/40] L:1.7632 D:0.0459 F:0.0289 ALN:17.1443 2285s
+Epoch [11/40] L:1.7381 D:0.0429 F:0.0280 ALN:16.9241 2281s
+Epoch [12/40] L:1.6860 D:0.0402 F:0.0273 ALN:16.4307 2289s
+  Val L:0.3908 ABS:0.4636 RMSE:1.7795 d1:0.1374
+Epoch [13/40] L:1.6609 D:0.0377 F:0.0265 ALN:16.2060 2281s
+Epoch [14/40] L:1.6052 D:0.0359 F:0.0259 ALN:15.6676 2290s
+Epoch [15/40] L:1.5690 D:0.0338 F:0.0251 ALN:15.3261 2285s
+Epoch [16/40] L:1.5106 D:0.0323 F:0.0248 ALN:14.7583 2290s
+  Val L:0.3744 ABS:0.4770 RMSE:1.7386 d1:0.1466
+Epoch [17/40] L:1.4604 D:0.0308 F:0.0244 ALN:14.2720 2285s
+Epoch [18/40] L:1.4111 D:0.0299 F:0.0239 ALN:13.7881 2290s
+Epoch [19/40] L:1.3668 D:0.0284 F:0.0235 ALN:13.3597 2289s
+Epoch [20/40] L:1.3030 D:0.0277 F:0.0231 ALN:12.7306 2286s
+  Val L:0.3236 ABS:0.4563 RMSE:1.6301 d1:0.2473
+  >> Best (score:1.2779 RMSE:1.6301 ABS:0.4563)
+Epoch [21/40] L:1.2556 D:0.0264 F:0.0226 ALN:12.2690 2282s
+Epoch [22/40] L:1.2092 D:0.0271 F:0.0223 ALN:11.7987 2285s
+Epoch [23/40] L:1.1556 D:0.0250 F:0.0217 ALN:11.2842 2281s
+Epoch [24/40] L:1.1106 D:0.0240 F:0.0214 ALN:10.8448 2669s
+  Val L:0.3603 ABS:0.4309 RMSE:1.7148 d1:0.2021
+Epoch [25/40] L:1.0734 D:0.0245 F:0.0209 ALN:10.4686 2285s
+Epoch [26/40] L:1.0215 D:0.0305 F:0.0204 ALN:9.8888 2281s
+Epoch [27/40] L:0.9773 D:0.0232 F:0.0200 ALN:9.5211 2284s
+Epoch [28/40] L:0.9444 D:0.0231 F:0.0197 ALN:9.1930 2283s
+  Val L:0.3526 ABS:0.4331 RMSE:1.6911 d1:0.1925
+Epoch [29/40] L:0.9053 D:0.0225 F:0.0192 ALN:8.8091 2285s
+Epoch [30/40] L:0.8644 D:0.0226 F:0.0187 ALN:8.3991 2285s
+Epoch [31/40] L:0.8333 D:0.0223 F:0.0182 ALN:8.0922 2288s
+Epoch [32/40] L:0.7974 D:0.0220 F:0.0178 ALN:7.7368 2285s
+  Val L:0.3453 ABS:0.4275 RMSE:1.6429 d1:0.2579
+Epoch [33/40] L:0.7679 D:0.0208 F:0.0173 ALN:7.4543 2285s
+Epoch [34/40] L:0.7400 D:0.0206 F:0.0168 ALN:7.1773 2282s
+Epoch [35/40] L:0.7135 D:0.0202 F:0.0163 ALN:6.9165 2287s
+Epoch [36/40] L:0.6853 D:0.0194 F:0.0159 ALN:6.6428 2287s
+  Val L:0.4852 ABS:0.5053 RMSE:1.9058 d1:0.1123
+Epoch [37/40] L:0.6565 D:0.0197 F:0.0156 ALN:6.3521 2285s
+Epoch [38/40] L:0.6311 D:0.0193 F:0.0150 ALN:6.1035 2286s
+Epoch [39/40] L:0.6077 D:0.0196 F:0.0146 ALN:5.8668 2286s
+Epoch [40/40] L:0.5843 D:0.0184 F:0.0144 ALN:5.6445 2289s
+  Val L:0.3869 ABS:0.4667 RMSE:1.7357 d1:0.1629
+
+Done. Best score:1.2779 RMSE:1.6301 ABS:0.4563

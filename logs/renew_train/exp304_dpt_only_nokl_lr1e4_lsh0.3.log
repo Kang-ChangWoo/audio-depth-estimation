@@ -1,0 +1,83 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: renew_dpt_only  Dataset: soundspaces
+BS: 32  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Model: renew_dpt_only (183.8M params)
+  [LR] cosine schedule enabled  warmup=1ep (737 steps), total=29480 steps
+Epoch [1/40] L:0.3996 D:0.3548 F:0.0605 948s
+Epoch [2/40] L:0.2445 D:0.2135 F:0.0377 853s
+  Val L:0.2657 ABS:0.4647 RMSE:1.3640 d1:0.4953
+  >> Best (score:1.0942 RMSE:1.3640 ABS:0.4647)
+Epoch [3/40] L:0.2268 D:0.1975 F:0.0339 917s
+Epoch [4/40] L:0.2175 D:0.1895 F:0.0306 910s
+  Val L:0.2462 ABS:0.4446 RMSE:1.2937 d1:0.5104
+  >> Best (score:1.0390 RMSE:1.2937 ABS:0.4446)
+Epoch [5/40] L:0.2105 D:0.1836 F:0.0283 907s
+Epoch [6/40] L:0.2046 D:0.1782 F:0.0267 893s
+  Val L:0.2315 ABS:0.3807 RMSE:1.2610 d1:0.5064
+  >> Best (score:0.9969 RMSE:1.2610 ABS:0.3807)
+Epoch [7/40] L:0.1990 D:0.1732 F:0.0256 718s
+Epoch [8/40] L:0.1940 D:0.1687 F:0.0247 700s
+  Val L:0.2269 ABS:0.4432 RMSE:1.2163 d1:0.5216
+  >> Best (score:0.9844 RMSE:1.2163 ABS:0.4432)
+Epoch [9/40] L:0.1876 D:0.1628 F:0.0237 648s
+Epoch [10/40] L:0.1826 D:0.1581 F:0.0232 760s
+  Val L:0.2374 ABS:0.3678 RMSE:1.2571 d1:0.5151
+Epoch [11/40] L:0.1746 D:0.1505 F:0.0224 989s
+Epoch [12/40] L:0.1677 D:0.1439 F:0.0218 695s
+  Val L:0.2274 ABS:0.4098 RMSE:1.2376 d1:0.5369
+Epoch [13/40] L:0.1595 D:0.1359 F:0.0213 793s
+Epoch [14/40] L:0.1514 D:0.1281 F:0.0206 741s
+  Val L:0.2350 ABS:0.3775 RMSE:1.2548 d1:0.5326
+Epoch [15/40] L:0.1427 D:0.1198 F:0.0198 822s
+Epoch [16/40] L:0.1353 D:0.1126 F:0.0193 719s
+  Val L:0.2315 ABS:0.4178 RMSE:1.2278 d1:0.5417
+Epoch [17/40] L:0.1276 D:0.1051 F:0.0187 904s
+Epoch [18/40] L:0.1207 D:0.0986 F:0.0180 792s
+  Val L:0.2416 ABS:0.4223 RMSE:1.2510 d1:0.5404
+Epoch [19/40] L:0.1142 D:0.0923 F:0.0175 759s
+Epoch [20/40] L:0.1082 D:0.0867 F:0.0168 753s
+  Val L:0.2411 ABS:0.4125 RMSE:1.2635 d1:0.5395
+Epoch [21/40] L:0.1032 D:0.0819 F:0.0161 786s
+Epoch [22/40] L:0.0981 D:0.0771 F:0.0154 877s
+  Val L:0.2444 ABS:0.4242 RMSE:1.2798 d1:0.5393
+Epoch [23/40] L:0.0936 D:0.0729 F:0.0148 772s
+Epoch [24/40] L:0.0896 D:0.0691 F:0.0141 787s
+  Val L:0.2458 ABS:0.4149 RMSE:1.2890 d1:0.5424
+Epoch [25/40] L:0.0858 D:0.0656 F:0.0134 833s
+Epoch [26/40] L:0.0822 D:0.0623 F:0.0127 817s
+  Val L:0.2508 ABS:0.4270 RMSE:1.3005 d1:0.5428
+Epoch [27/40] L:0.0791 D:0.0595 F:0.0120 832s
+Epoch [28/40] L:0.0761 D:0.0568 F:0.0113 798s
+  Val L:0.2503 ABS:0.4272 RMSE:1.3045 d1:0.5455
+Epoch [29/40] L:0.0734 D:0.0543 F:0.0107 861s
+Epoch [30/40] L:0.0710 D:0.0521 F:0.0101 901s
+  Val L:0.2525 ABS:0.4335 RMSE:1.3153 d1:0.5451
+Epoch [31/40] L:0.0688 D:0.0502 F:0.0095 864s
+Epoch [32/40] L:0.0669 D:0.0484 F:0.0090 776s
+  Val L:0.2578 ABS:0.4340 RMSE:1.3323 d1:0.5439
+Epoch [33/40] L:0.0653 D:0.0470 F:0.0084 773s
+Epoch [34/40] L:0.0639 D:0.0458 F:0.0080 707s
+  Val L:0.2598 ABS:0.4460 RMSE:1.3386 d1:0.5436
+Epoch [35/40] L:0.0628 D:0.0448 F:0.0076 866s
+Epoch [36/40] L:0.0619 D:0.0440 F:0.0073 763s
+  Val L:0.2618 ABS:0.4451 RMSE:1.3455 d1:0.5427
+Epoch [37/40] L:0.0613 D:0.0435 F:0.0070 619s
+Epoch [38/40] L:0.0609 D:0.0432 F:0.0068 566s
+  Val L:0.2629 ABS:0.4460 RMSE:1.3474 d1:0.5422
+Epoch [39/40] L:0.0607 D:0.0430 F:0.0067 490s
+Epoch [40/40] L:0.0606 D:0.0429 F:0.0067 401s
+  Val L:0.2631 ABS:0.4459 RMSE:1.3482 d1:0.5420
+
+Done. Best score:0.9844 RMSE:1.2163 ABS:0.4432

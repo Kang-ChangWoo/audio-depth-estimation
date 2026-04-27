@@ -1,0 +1,47 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: n2_temporal_energy  Dataset: soundspaces
+BS: 128  LR: 0.001  Opt: AdamW
+============================================================
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+  N2 dataset: 3 temporal bins (key=overlap3)
+Loaded scene split from /root/storage/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+  N2 dataset: 3 temporal bins (key=overlap3)
+Train: 23560, Val: 2951
+Model: n2_temporal_energy (55.5M params)
+Epoch [1/40] L:0.5720 D:0.5227 F:0.0953 3340s
+Epoch [2/40] L:0.4287 D:0.3975 F:0.0517 2374s
+Epoch [3/40] L:0.3770 D:0.3483 F:0.0457 3150s
+Epoch [4/40] L:0.3532 D:0.3282 F:0.0414 4323s
+  Val L:0.3967 ABS:0.4497 RMSE:1.3432 d1:0.4680
+  >> Best (score:1.0751 RMSE:1.3432 ABS:0.4497)
+Traceback (most recent call last):
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 837, in <module>
+    train(cfg)
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 676, in train
+    for batch in train_loader:
+  File "/opt/conda/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 734, in __next__
+    data = self._next_data()
+           ^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1492, in _next_data
+    idx, data = self._get_data()
+                ^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1444, in _get_data
+    success, data = self._try_get_data()
+                    ^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1285, in _try_get_data
+    data = self._data_queue.get(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/queue.py", line 180, in get
+    self.not_empty.wait(remaining)
+  File "/opt/conda/lib/python3.11/threading.py", line 331, in wait
+    gotit = waiter.acquire(True, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

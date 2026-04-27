@@ -1,5 +1,5 @@
 #!/bin/bash
-# Test FOA_v2_js model (independent from bulk testing)
+# Test FOA_v2_js_rgb model (audio-only at inference)
 set -euo pipefail
 
 # ── Parameters ──
@@ -16,13 +16,14 @@ LOG_DIR="$PROJECT_DIR/logs"
 LOG_FILE="$LOG_DIR/test_foa_${EXPERIMENT}.log"
 mkdir -p "$LOG_DIR"
 
-EXP_NAME="${EXPERIMENT}_foa_v2_js"
-CKPT_DIR="unet_256_soundspaces_BS32_Lr0.001_AdamW_${EXP_NAME}"
+EXP_NAME="${EXPERIMENT}_foa_v2_js_rgb"
+CKPT_DIR="unet_256_soundspaces_BS4_Lr0.001_AdamW_${EXP_NAME}"
 CKPT_PATH="$PROJECT_DIR/checkpoints/${CKPT_DIR}/best_model.pth"
 
 echo "============================================================"
 echo "  GPU:         $GPU"
 echo "  Experiment:  $EXP_NAME"
+echo "  Config:      foa_v2_js_rgb"
 echo "  Eval on:     $EVAL_ON"
 echo "  Checkpoint:  $CKPT_PATH"
 echo "  Vis/scene:   $VIS_PER_SCENE"
@@ -36,7 +37,7 @@ if [ ! -f "$CKPT_PATH" ]; then
 fi
 
 CUDA_VISIBLE_DEVICES="$GPU" python3 test.py \
-    --config foa_v2_js \
+    --config foa_v2_js_rgb \
     --experiment-name "$EXP_NAME" \
     --checkpoint-path "$CKPT_PATH" \
     --eval-on "$EVAL_ON" \

@@ -1,0 +1,86 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: n9_0424  Dataset: soundspaces
+BS: 8  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Model: n9_0424 (100.0M params)
+Epoch [1/40] L:0.2581 D:0.2581 F:0.1030 619s
+Epoch [2/40] L:0.2269 D:0.2269 F:0.1033 616s
+Epoch [3/40] L:0.2194 D:0.2194 F:0.1021 619s
+Epoch [4/40] L:0.2127 D:0.2127 F:0.1010 621s
+  Val L:0.2555 ABS:0.4283 RMSE:1.4530 d1:0.4864
+  >> Best (score:1.1456 RMSE:1.4530 ABS:0.4283)
+Epoch [5/40] L:0.2066 D:0.2066 F:0.1004 621s
+Epoch [6/40] L:0.2023 D:0.2023 F:0.0987 620s
+Epoch [7/40] L:0.1980 D:0.1980 F:0.0961 619s
+Epoch [8/40] L:0.1945 D:0.1945 F:0.0936 617s
+  Val L:0.2421 ABS:0.4213 RMSE:1.4011 d1:0.4981
+  >> Best (score:1.1072 RMSE:1.4011 ABS:0.4213)
+Epoch [9/40] L:0.1909 D:0.1909 F:0.0922 615s
+Epoch [10/40] L:0.1874 D:0.1874 F:0.0897 616s
+Epoch [11/40] L:0.1845 D:0.1845 F:0.0876 617s
+Epoch [12/40] L:0.1816 D:0.1816 F:0.0854 619s
+  Val L:0.2374 ABS:0.4203 RMSE:1.3739 d1:0.5242
+  >> Best (score:1.0878 RMSE:1.3739 ABS:0.4203)
+Epoch [13/40] L:0.1784 D:0.1784 F:0.0838 619s
+Epoch [14/40] L:0.1751 D:0.1751 F:0.0827 621s
+Epoch [15/40] L:0.1715 D:0.1715 F:0.0814 619s
+Epoch [16/40] L:0.1680 D:0.1680 F:0.0805 618s
+  Val L:0.2433 ABS:0.4020 RMSE:1.4038 d1:0.5099
+Epoch [17/40] L:0.1647 D:0.1647 F:0.0787 616s
+Epoch [18/40] L:0.1608 D:0.1608 F:0.0774 620s
+Epoch [19/40] L:0.1571 D:0.1571 F:0.0762 623s
+Epoch [20/40] L:0.1539 D:0.1539 F:0.0758 621s
+  Val L:0.2527 ABS:0.4002 RMSE:1.4293 d1:0.5193
+Epoch [21/40] L:0.1503 D:0.1503 F:0.0751 619s
+Epoch [22/40] L:0.1467 D:0.1467 F:0.0740 616s
+Epoch [23/40] L:0.1426 D:0.1426 F:0.0729 617s
+Epoch [24/40] L:0.1395 D:0.1395 F:0.0727 621s
+  Val L:0.2535 ABS:0.4457 RMSE:1.4033 d1:0.5280
+Epoch [25/40] L:0.1353 D:0.1353 F:0.0714 617s
+Epoch [26/40] L:0.1319 D:0.1319 F:0.0707 621s
+Epoch [27/40] L:0.1286 D:0.1286 F:0.0704 615s
+Epoch [28/40] L:0.1246 D:0.1246 F:0.0684 616s
+  Val L:0.2556 ABS:0.4610 RMSE:1.4047 d1:0.5313
+Epoch [29/40] L:0.1215 D:0.1215 F:0.0667 613s
+Epoch [30/40] L:0.1181 D:0.1181 F:0.0666 616s
+Traceback (most recent call last):
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 892, in <module>
+    if args.num_workers is not None: cfg.mode.num_threads = args.num_workers
+    ^^^^^^^^^^
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 736, in train
+    t0 = time.time()
+                ^^^^
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 95, in _train_step_foa_0415
+    out = model(audio)
+          ^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/parallel/data_parallel.py", line 194, in forward
+    outputs = self.parallel_apply(replicas, inputs, module_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/parallel/data_parallel.py", line 213, in parallel_apply
+    return parallel_apply(
+           ^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/parallel/parallel_apply.py", line 121, in parallel_apply
+    thread.join()
+  File "/opt/conda/lib/python3.11/threading.py", line 1119, in join
+    self._wait_for_tstate_lock()
+  File "/opt/conda/lib/python3.11/threading.py", line 1139, in _wait_for_tstate_lock
+    if lock.acquire(block, timeout):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

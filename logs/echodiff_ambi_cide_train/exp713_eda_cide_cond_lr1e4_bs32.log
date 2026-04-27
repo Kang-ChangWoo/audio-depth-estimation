@@ -1,0 +1,50 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/opt/conda/lib/python3.11/site-packages/torch/cuda/__init__.py:829: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+============================================================
+Model: echodiffusion_ambi  Dataset: soundspaces
+BS: 12  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_8b3be925d3ae.json) [ambisonic=ON] [waveform=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_be0f29dd7abf.json) [ambisonic=ON] [waveform=ON]
+  Precomputed SH basis matrix: (131072, 4) (order=1)
+Train: 23560, Val: 2951
+Loading weights:   0%|          | 0/210 [00:00<?, ?it/s]Loading weights: 100%|██████████| 210/210 [00:00<00:00, 5052.10it/s]
+[1mWav2Vec2Model LOAD REPORT[0m from: facebook/wav2vec2-base-960h
+Key               | Status     | 
+------------------+------------+-
+lm_head.weight    | UNEXPECTED | 
+lm_head.bias      | UNEXPECTED | 
+masked_spec_embed | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+/opt/conda/lib/python3.11/site-packages/torch/utils/data/dataloader.py:666: UserWarning: 'pin_memory' argument is set as true but no accelerator is found, then device pinned memory won't be used.
+  warnings.warn(warn_msg)
+  [echodiff_ambi] foa_mode=condition K=8 spec_in=2 use_cide=True gate_learnable=True
+Model: echodiffusion_ambi (133.4M params)
+  [train] epoch 1 step 392/1964 (3374s)
+  [train] epoch 1 step 784/1964 (6742s)
+  [train] epoch 1 step 1176/1964 (10116s)
+  [train] epoch 1 step 1568/1964 (13471s)
+  [train] epoch 1 step 1960/1964 (16837s)
+Epoch [1/40] L:0.3328 D:0.2893 F:0.0000 16867s
+  [train] epoch 2 step 392/1964 (3335s)
+  [train] epoch 2 step 784/1964 (6745s)
+  [train] epoch 2 step 1176/1964 (10138s)
+  [train] epoch 2 step 1568/1964 (13536s)
+  [train] epoch 2 step 1960/1964 (16918s)
+Epoch [2/40] L:0.2826 D:0.2401 F:0.0000 16947s
+  [train] epoch 3 step 392/1964 (3366s)
+  [train] epoch 3 step 784/1964 (6732s)
+  [train] epoch 3 step 1176/1964 (10103s)
+  [train] epoch 3 step 1568/1964 (13451s)
+  [train] epoch 3 step 1960/1964 (16807s)

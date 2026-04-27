@@ -10,6 +10,11 @@ import torch.nn.functional as F
 
 # from .unet_foa import AudioDepthFOAGenerator, sh_basis_erp, DeepScaleShift
 from data.sh_basis import _acn_to_nm, _sn3d_norm, _real_sh_sn3d_np
+from timm.models.vision_transformer import _cfg
+from typing import Any, Dict, Optional, Tuple
+from .foa_js_swin import SwinTransformer
+from functools import partial
+from einops import rearrange
 
 
 def sh_basis_erp(max_order, H, W, dtype=torch.float32):
@@ -26,6 +31,84 @@ def sh_basis_erp(max_order, H, W, dtype=torch.float32):
     for q in range(n_ch):
         basis[q] = _real_sh_sn3d_np(q, elevation, azimuth)
     return torch.from_numpy(basis).to(dtype)
+
+
+class AttentionLayer(nn.Module):
+    def __init__(
+        self,
+        sink_dim: int,
+        hidden_dim: int,
+        source_dim: Optional[int] = None,
+        output_dim: Optional[int] = None,
+        num_heads: int = 8,
+        dropout: float = 0.0,
+        pre_norm: bool = True,
+        norm_layer=nn.LayerNorm,
+        sink_competition: bool = False,
+        qkv_bias: bool = True,
+        eps: float = 1e-6,
+    ):
+        super().__init__()
+        self.eps = eps
+        self.pre_norm = pre_norm
+        assert (
+            hidden_dim % num_heads
+        ) == 0, "hidden_dim and num_heads are not divisible"
+        self.scale = (hidden_dim // num_heads) ** -0.5
+        self.num_heads = num_heads
+
+        self.norm = norm_layer(sink_dim, eps=eps)
+        self.norm_context = (
+            norm_layer(source_dim, eps=eps) if source_dim is not None else None
+        )
+
+        self.to_q = nn.Linear(sink_dim, hidden_dim, bias=qkv_bias)
+        self.to_kv = nn.Linear(
+            sink_dim if source_dim is None else source_dim,
+            hidden_dim * 2,
+            bias=qkv_bias,
+        )
+        self.to_out = nn.Linear(
+            hidden_dim, sink_dim if output_dim is None else output_dim
+        )
+        self.dropout = nn.Dropout(dropout) if dropout > 0.0 else nn.Identity()
+
+        self.sink_competition = sink_competition
+
+    def forward(
+        self, sink: torch.Tensor, source: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
+        if self.pre_norm:
+            sink = self.norm(sink)
+            if source is not None:
+                source = self.norm_context(source)
+
+        q = self.to_q(sink)
+        source = source if source is not None else sink
+        k, v = self.to_kv(source).chunk(2, dim=-1)
+
+        q, k, v = map(
+            lambda t: rearrange(t, "b n (h d) -> (b h) n d", h=self.num_heads),
+            (q, k, v),
+        )
+
+        similarity_matrix = torch.einsum("bid, bjd -> bij", q, k) * self.scale
+
+        if self.sink_competition:
+            attn = F.softmax(similarity_matrix, dim=-2) + self.eps
+            attn = attn / torch.sum(attn, dim=(-1,), keepdim=True)
+        else:
+            attn = F.softmax(similarity_matrix, dim=-1)
+
+        attn = self.dropout(attn)
+
+        out = torch.einsum("bij, bjd -> bid", attn, v)
+        out = rearrange(out, "(b h) n d -> b n (h d)", h=self.num_heads)
+        out = self.to_out(out)
+        if not self.pre_norm:
+            out = self.norm(out)
+
+        return out
 
 
 class DeepScaleShift(nn.Module):
@@ -127,9 +210,9 @@ class AudioDepthFOAGenerator(nn.Module):
             nn.Linear(proj_dim+foa_dim, hoa_dim),
         )
 
-        # Img Decoder
-        img_decoder_layers = []
-        img_decoder_layers.append(nn.Sequential(
+        # Decoder
+        decoder_layers = []
+        decoder_layers.append(nn.Sequential(
             nn.ReLU(True),
             nn.ConvTranspose2d(ngf * 8, ngf * 8, 4, 2, 1, bias=use_bias),
             norm_layer(ngf * 8),
@@ -142,89 +225,23 @@ class AudioDepthFOAGenerator(nn.Module):
             ]
             if use_dropout:
                 layers.append(nn.Dropout(0.5))
-            img_decoder_layers.append(nn.Sequential(*layers))
-        img_decoder_layers.append(nn.Sequential(
+            decoder_layers.append(nn.Sequential(*layers))
+        decoder_layers.append(nn.Sequential(
             nn.ReLU(True),
             nn.ConvTranspose2d(ngf * 8 * 2, ngf * 4, 4, 2, 1, bias=use_bias),
             norm_layer(ngf * 4),
         ))
-        img_decoder_layers.append(nn.Sequential(
+        decoder_layers.append(nn.Sequential(
             nn.ReLU(True),
             nn.ConvTranspose2d(ngf * 4 * 2, ngf * 2, 4, 2, 1, bias=use_bias),
             norm_layer(ngf * 2),
         ))
-        img_decoder_layers.append(nn.Sequential(
+        decoder_layers.append(nn.Sequential(
             nn.ReLU(True),
             nn.ConvTranspose2d(ngf * 2 * 2, ngf, 4, 2, 1, bias=use_bias),
             norm_layer(ngf),
         ))
-        self.img_decoders = nn.ModuleList(img_decoder_layers)
-
-        # Audio Decoder
-        aud_decoder_layers = []
-        aud_decoder_layers.append(nn.Sequential(
-            nn.ReLU(True),
-            nn.ConvTranspose2d(ngf * 2, ngf * 8, 4, 2, 1, bias=use_bias),
-            norm_layer(ngf * 8),
-        ))
-        for _ in range(num_downs - 5):
-            layers = [
-                nn.ReLU(True),
-                nn.ConvTranspose2d(ngf * 8, ngf * 8, 4, 2, 1, bias=use_bias),
-                norm_layer(ngf * 8),
-            ]
-            if use_dropout:
-                layers.append(nn.Dropout(0.5))
-            aud_decoder_layers.append(nn.Sequential(*layers))
-        aud_decoder_layers.append(nn.Sequential(
-            nn.ReLU(True),
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=use_bias),
-            norm_layer(ngf * 4),
-        ))
-        aud_decoder_layers.append(nn.Sequential(
-            nn.ReLU(True),
-            nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=use_bias),
-            norm_layer(ngf * 2),
-        ))
-        aud_decoder_layers.append(nn.Sequential(
-            nn.ReLU(True),
-            nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1, bias=use_bias),
-            norm_layer(ngf),
-        ))
-        self.aud_decoders = nn.ModuleList(aud_decoder_layers)
-
-        # Align layere
-        align_layers = []
-        align_layers.append(nn.Sequential(
-            nn.ReLU(True),
-            nn.Conv2d(2 * ngf * 8, ngf * 8, kernel_size=3, padding=1, bias=use_bias),
-            norm_layer(ngf * 8),
-        ))
-        for _ in range(num_downs - 5):
-            layers = [
-                nn.ReLU(True),
-                nn.Conv2d(ngf * 8 * 2, ngf * 8, kernel_size=3, padding=1, bias=use_bias),
-                norm_layer(ngf * 8),
-            ]
-            if use_dropout:
-                layers.append(nn.Dropout(0.5))
-            align_layers.append(nn.Sequential(*layers))
-        align_layers.append(nn.Sequential(
-            nn.ReLU(True),
-            nn.Conv2d(ngf * 8 * 2, ngf * 8, kernel_size=3, padding=1, bias=use_bias),
-            norm_layer(ngf * 8),
-        ))
-        align_layers.append(nn.Sequential(
-            nn.ReLU(True),
-            nn.Conv2d(ngf * 4 * 2, ngf * 4, kernel_size=3, padding=1, bias=use_bias),
-            norm_layer(ngf * 4),
-        ))
-        align_layers.append(nn.Sequential(
-            nn.ReLU(True),
-            nn.Conv2d(ngf * 2 * 2, ngf * 2, kernel_size=3, padding=1, bias=use_bias),
-            norm_layer(ngf*2),
-        ))
-        self.aligner = nn.ModuleList(align_layers)
+        self.decoders = nn.ModuleList(decoder_layers)
 
         self.energy_head = nn.ConvTranspose2d(ngf, 1, 4, 2, 1)
 
@@ -256,9 +273,6 @@ class AudioDepthFOAGenerator(nn.Module):
         return num / den
 
 
-
-
-
 class FiLMConditioner(nn.Module):
     """Modulate spatial features using a conditioning vector."""
     def __init__(self, cond_dim, feat_channels):
@@ -277,6 +291,52 @@ class FiLMConditioner(nn.Module):
         return gamma * feat + beta
 
 
+''' Added by Syniez '''
+class SH_Coeff_Extractor(nn.Module):
+    def __init__(self):
+        super(SH_Coeff_Extractor, self).__init__()
+        self.dense1 = nn.Conv2d(128, 64, kernel_size=5, stride=2, bias=False)
+        self.dense2 = nn.Conv2d(64, 32, kernel_size=5, stride=2, bias=False)
+        self.dense3 = nn.Conv2d(32, 16, kernel_size=5, stride=2, bias=False)
+        self.final_dense = nn.Linear(16*13*29, 4)
+        
+        self.bn1 = nn.BatchNorm2d(64)
+        self.bn2 = nn.BatchNorm2d(32)
+        self.bn3 = nn.BatchNorm2d(16)
+
+        self.relu = nn.ReLU(inplace=True)
+        
+    def forward(self, x):
+        x = self.relu(self.bn1(self.dense1(x)))
+        x = self.relu(self.bn2(self.dense2(x)))
+        x = self.relu(self.bn3(self.dense3(x)))
+        
+        x = torch.flatten(x, 1)
+        coeffs = self.final_dense(x)
+        return coeffs
+
+
+def swin_large_22k(pretrained: bool = True, **kwargs):
+    if pretrained:
+        pretrained = "https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_large_patch4_window7_224_22k.pth"
+    model = SwinTransformer(
+        patch_size=4,
+        window_size=7,
+        embed_dims=[192 * (2**i) for i in range(4)],
+        num_heads=[6, 12, 24, 48],
+        mlp_ratios=[4, 4, 4, 4],
+        qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        depths=[2, 2, 18, 2],
+        drop_path_rate=0.2,
+        pretrained=pretrained,
+        **kwargs
+    )
+    model.default_cfg = _cfg()
+    return model
+
+
+
 class FOAv2Generator(AudioDepthFOAGenerator):
     """Improved FOA baseline with FiLM decoder conditioning and FOA-depth gradient consistency."""
 
@@ -288,11 +348,45 @@ class FOAv2Generator(AudioDepthFOAGenerator):
             cfg, input_nc=input_nc, output_nc=output_nc, num_downs=num_downs,
             ngf=ngf, use_dropout=use_dropout, proj_dim=proj_dim, foa_dim=foa_dim,
             sh_order=sh_order, scale_shift_hidden=scale_shift_hidden,
-            scale_shift_layers=scale_shift_layers, H_erp=H_erp, W_erp=W_erp,
-        )
+            scale_shift_layers=scale_shift_layers, H_erp=H_erp, W_erp=W_erp,)
+
         feat_dim = ngf * 8
-        # FiLM conditioning: inject FOA latent into first decoder block
-        self.film = FiLMConditioner(proj_dim, feat_dim)
+
+        self.SH_basis = sh_basis_erp(max_order=1, H=128, W=256)
+        self.PE = nn.Parameter(torch.zeros(128, 128))
+        self.MLP = nn.Sequential(nn.Linear(128, 256),
+                                nn.GELU(),
+                                nn.Linear(256, 128))
+        self.depth_head = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=1),
+                                        nn.BatchNorm2d(64),
+                                        nn.ReLU(inplace=True),
+                                        nn.Conv2d(64, 1, kernel_size=3, padding=1))
+
+        self.patch_emb = nn.Conv2d(128, 128, kernel_size=16, stride=16, padding=0)
+        self.SH_patch_emb = nn.Conv2d(4, 4, kernel_size=16, stride=16, padding=0)
+        self.coeff_net = SH_Coeff_Extractor()
+        self.Cross_Attn = AttentionLayer(sink_dim=128,
+                                        hidden_dim=128,
+                                        source_dim=128,
+                                        output_dim=128,
+                                        num_heads=1,
+                                        dropout=0.0,
+                                        pre_norm=True,
+                                        sink_competition=True)
+
+        self.Swin_encoder = swin_large_22k(pretrained=True)
+        self.Deconv = nn.ModuleList()
+
+        self.Deconv.append(nn.Sequential(nn.ConvTranspose2d(1536, 768, 4, 2, 1, bias=True),
+                                            nn.BatchNorm2d(768),
+                                            nn.ReLU(inplace=True)))
+        for i in range(3):
+            self.Deconv.append(nn.Sequential(nn.ConvTranspose2d(2 * 768 // (2**i), 768 // (2**(i+1)), 4, 2, 1, bias=True),
+                                            nn.BatchNorm2d(768 // (2**(i+1))),
+                                            nn.ReLU(inplace=True)))
+
+        self.Deconv.append(nn.Conv2d(96, 128, kernel_size=3, padding=1, bias=True))
+        
 
     def _gradient_consistency(self, pred_depth, energy_recon):
         """Spatial gradient alignment between depth and FOA energy.
@@ -310,11 +404,16 @@ class FOAv2Generator(AudioDepthFOAGenerator):
         d_grad = torch.cat([d_dx, d_dy], dim=1)  # (B, 2, H, W)
         e_grad = torch.cat([e_dx, e_dy], dim=1)
 
-        # Cosine similarity of gradient fields
         cos = F.cosine_similarity(d_grad, e_grad, dim=1).mean()
-        return 1.0 - cos  # 0 = perfect alignment
+        return 1.0 - cos
 
-    def forward(self, x, return_hist_maps=False):
+    def invert_encoder_output_order(self, xs: Tuple[torch.Tensor, ...]) -> Tuple[torch.Tensor, ...]:
+        return tuple(xs[::-1])
+
+    def filter_decoder_relevant_resolutions(self, decoder_outputs: Tuple[torch.Tensor, ...]) -> Tuple[torch.Tensor, ...]:
+        return tuple(decoder_outputs[1:])
+
+    def audio_enc(self, x):
         enc_features = []
         h = self.enc0(x)    # Input shape: [256 x 512]
         enc_features.append(h)
@@ -322,45 +421,70 @@ class FOAv2Generator(AudioDepthFOAGenerator):
             h = enc(h)
             enc_features.append(h)
         bottleneck = self.enc_inner(h)  # [B, 512, 1, 2]
-        
-        # SH branch
-        pooled = self.pool(bottleneck)          # [B, 512, 1, 1]
-        foa_latent = self.audio_proj(pooled)    # [B, 128]
-        pred_foa = self.foa_head(foa_latent)
-        pred_hoa = self.hoa_head(torch.cat([pred_foa, foa_latent], dim=1))
-        pred_sh = torch.cat([pred_foa, pred_hoa], dim=1)
-        
-        # Decoder
-        foa_latent = (foa_latent.unsqueeze(-1).unsqueeze(-1)).expand(-1, -1, -1, 2)
+
         enc_reversed = enc_features[::-1]
-
-        h = self.img_decoders[0](bottleneck)
-        a = self.aud_decoders[0](foa_latent.clone())
-        
-        for i in range(len(self.img_decoders)-1):
-            align = torch.cat([h, a], dim=1)
-            align = self.aligner[i+1](align)
-            
-            h = torch.cat([enc_reversed[i], h+align], dim=1)  # [B, C, H, W]
-            h = self.img_decoders[i+1](h)
-            a = self.aud_decoders[i+1](a+align)
-        
-        pred_energy = self.energy_head(a)
-
+        h = self.decoders[0](bottleneck)
+        for i in range(len(self.decoders) - 1):
+            h = torch.cat([enc_reversed[i], h], dim=1)
+            h = self.decoders[i + 1](h)
         h = torch.cat([enc_reversed[-1], h], dim=1)
-        pred_depth = self.dec_outer(h)
+        return h
+
+    def img_enc(self, x):
+        encoder_outputs = self.Swin_encoder(x)
+        feat = self.Deconv[0](encoder_outputs[-1])
+
+        encoder_outputs = encoder_outputs[::-1]
+        for i in range(len(self.Deconv)-2):
+            feat = torch.cat([encoder_outputs[i+1], feat], dim=1)
+            feat = self.Deconv[i+1](feat)
+        
+        feat = self.Deconv[-1](feat)
+        return feat
+
+    def feature_fusion(self, q, kv):
+        B, C, H, W = q.shape
+        PE = self.PE.unsqueeze(0).expand(B, -1, -1)
+
+        q_emb = self.patch_emb(q.clone()).flatten(2)
+        kv_emb = self.SH_patch_emb(kv).flatten(2)
+
+        update = self.Cross_Attn(q_emb + PE, kv_emb)
+        q_emb = q_emb + update
+        
+        q_flat = rearrange(q.clone(), "b c h w -> b (h w) c")
+        update = self.Cross_Attn(q_flat, q_emb)
+
+        q_flat = q_flat + update
+        q_flat = q_flat + self.MLP(q_flat)
+        output = rearrange(q_flat, "b (h w) c -> b c h w", h=H)
+        return output
 
 
-        out = {
-            "pred_depth": pred_depth,
-            "foa_latent": foa_latent,
-            "pred_foa": pred_foa,
-            "pred_hoa": pred_hoa,
-            "pred_sh": pred_sh,
-        }
+    def forward(self, audio, rgb=None, mode='train', return_hist_maps=False):
+        audio_feat = self.audio_enc(audio)
+        SH_coeffs = self.coeff_net(audio_feat)
+        SH = torch.einsum("bn, nhw -> bnhw", SH_coeffs, self.SH_basis.to(SH_coeffs.device))
+
+        if mode == 'train' and rgb is not None:
+            rgb_feat = self.img_enc(rgb)
+            feat = self.feature_fusion(rgb_feat, SH)
+        else:
+            rgb_feat = None
+            feat = self.feature_fusion(audio_feat, SH)
+
+        pred_depth = self.depth_head(feat)
+
+        out = {"pred_depth": pred_depth,
+               "foa_latent": None,
+               "pred_foa": SH_coeffs,
+               "pred_hoa": None,
+               "pred_sh": None,
+               "audio_feat": audio_feat,
+               "rgb_feat": rgb_feat,}
 
         if return_hist_maps:
-            sh_aligned = self.scale_shift(pred_sh)
+            sh_aligned = self.scale_shift(SH_coeffs)
             energy_recon_aligned = self.reconstruct_from_coeffs(sh_aligned)
             depth_sh_coeffs = self.project_depth_to_sh(pred_depth)
             depth_sh = self.reconstruct_from_coeffs(depth_sh_coeffs)

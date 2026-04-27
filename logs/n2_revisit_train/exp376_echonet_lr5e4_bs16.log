@@ -1,0 +1,30 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: echonet  Dataset: soundspaces
+BS: 16  LR: 0.0005  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_c7ed256fbb9b.json)
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_89df6a83b017.json)
+Train: 23560, Val: 2951
+Model: echonet (321.9M params)
+  [train] epoch 1 step 294/1473 (3720s)
+  [train] epoch 1 step 588/1473 (7413s)
+  [train] epoch 1 step 882/1473 (11106s)
+  [train] epoch 1 step 1176/1473 (14800s)
+  [train] epoch 1 step 1470/1473 (18512s)
+Epoch [1/40] L:0.2549 D:0.2549 18544s
+  [train] epoch 2 step 294/1473 (3618s)
+  [train] epoch 2 step 588/1473 (7102s)
+  [train] epoch 2 step 882/1473 (10594s)
+  [train] epoch 2 step 1176/1473 (14666s)
+  [train] epoch 2 step 1470/1473 (18359s)
+Epoch [2/40] L:0.2386 D:0.2386 18392s
+  [train] epoch 3 step 294/1473 (3721s)
+  [train] epoch 3 step 588/1473 (7337s)
+  [train] epoch 3 step 882/1473 (10827s)
+  [train] epoch 3 step 1176/1473 (14318s)

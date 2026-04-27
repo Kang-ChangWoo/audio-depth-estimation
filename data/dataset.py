@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import time
 import warnings
 import numpy as np
 import torch
@@ -67,10 +68,38 @@ class SoundSpacesDataset(Dataset):
         self.root_dir = cfg.dataset.dataset_dir
         self.audio_format = cfg.dataset.audio_format
         self.depth_type = cfg.dataset.depth_type
+        # Optional override for the depth-directory name inside each
+        # scene (file names inside stay '{depth_type}_depth_{idx}.npy').
+        # Used to load radial depth from 'erp_depth_radial/' while
+        # keeping depth_type='erp'. Safe no-op when unset.
+        self.depth_dir_name = (getattr(cfg.dataset, 'depth_dir', None)
+                               or f'{cfg.dataset.depth_type}_depth')
         self.max_depth = cfg.dataset.max_depth
         self.min_depth = cfg.dataset.min_depth
         self.use_ambisonic = getattr(cfg.dataset, 'use_ambisonic', False)
         self.use_waveform = getattr(cfg.dataset, 'use_waveform', False)
+        # n9_0424: per-distance-bin FOA representatives via Method-E
+        # eigendecomposition of the FOA covariance inside each round-trip
+        # time window. Requires use_ambisonic=True.
+        self.use_distance_bins = getattr(cfg.dataset, 'use_distance_bins', False)
+        if self.use_distance_bins and not self.use_ambisonic:
+            raise ValueError("use_distance_bins=True requires use_ambisonic=True")
+        # Sample-rate assumption for time↔distance conversion. Matches the
+        # hardcoded early/mid window boundaries elsewhere in this file
+        # (2600 samples ≈ 59ms ≈ 10m round-trip at 343 m/s).
+        self._distance_bins_sr = int(getattr(
+            cfg.dataset, 'distance_bins_sr', 44100))
+        # n3_0425: configurable FOA target shape and computation kind.
+        #   rep_kind ∈ {'eigen', 'rms'}  (default 'eigen' — preserves n9_0424)
+        #   rep_K    ∈ ℕ                 (default 8     — preserves n9_0424)
+        # K=8 + eigen retains the existing geometric distance-bin layout
+        # used by n9_0424. Other K values use equal-time bins over the same
+        # round-trip range (0 → 10 m, ~2570 samples at 44.1 kHz).
+        self._rep_kind = str(getattr(cfg.dataset, 'rep_kind', 'eigen')).lower()
+        if self._rep_kind not in ('eigen', 'rms'):
+            raise ValueError(f"rep_kind must be 'eigen' or 'rms', got {self._rep_kind!r}")
+        self._rep_K = int(getattr(cfg.dataset, 'rep_K', 8))
+        self._distance_bins_edges = self._compute_distance_bin_edges(self._rep_K)
 
         scene_split = get_scene_split(
             self.root_dir, cfg.dataset.split_ratio, seed=cfg.dataset.split_seed)
@@ -130,17 +159,29 @@ class SoundSpacesDataset(Dataset):
         samples = []
         skipped = 0
         cache_dirty = False
+        n_scenes = len(self.scenes)
+        print(f"[{split}] building sample list: {n_scenes} scenes, "
+              f"depth_type={self.depth_type}"
+              f"{' [ambisonic=ON]' if self.use_ambisonic else ''}"
+              f" (no fast cache — this may take a few minutes)",
+              flush=True)
+        t_start = time.time()
 
-        for scene in self.scenes:
+        for si, scene in enumerate(self.scenes, start=1):
             audio_dir = os.path.join(self.root_dir, scene, 'audio_wav')
-            depth_dir = os.path.join(self.root_dir, scene, f'{self.depth_type}_depth')
+            depth_dir = os.path.join(self.root_dir, scene, self.depth_dir_name)
             if not os.path.isdir(audio_dir) or not os.path.isdir(depth_dir):
+                print(f"  [{si:3d}/{n_scenes}] {scene}: skipped (missing dirs)",
+                      flush=True)
                 continue
             if self.use_ambisonic:
                 ambi_dir = os.path.join(self.root_dir, scene, 'ambi1_npy')
                 if not os.path.isdir(ambi_dir):
+                    print(f"  [{si:3d}/{n_scenes}] {scene}: skipped (no ambi1_npy)",
+                          flush=True)
                     continue
 
+            scene_before = len(samples)
             audio_files = sorted([f for f in os.listdir(audio_dir) if f.endswith('.wav')])
             for af in audio_files:
                 idx = af.replace('audio_', '').replace('.wav', '')
@@ -166,6 +207,12 @@ class SoundSpacesDataset(Dataset):
                     skipped += 1
                     continue
                 samples.append((scene, idx))
+
+            scene_kept = len(samples) - scene_before
+            elapsed = time.time() - t_start
+            print(f"  [{si:3d}/{n_scenes}] {scene}: +{scene_kept} samples "
+                  f"(total {len(samples)}, skipped {skipped}, {elapsed:.0f}s)",
+                  flush=True)
 
         if cache_dirty:
             with open(cache_path, 'w') as f:
@@ -212,7 +259,7 @@ class SoundSpacesDataset(Dataset):
 
         # Load ERP depth
         depth_path = os.path.join(
-            self.root_dir, scene, f'{self.depth_type}_depth',
+            self.root_dir, scene, self.depth_dir_name,
             f'{self.depth_type}_depth_{sample_idx}.npy')
         depth = np.load(depth_path).astype(np.float32)
         depth = np.nan_to_num(depth)
@@ -236,8 +283,13 @@ class SoundSpacesDataset(Dataset):
                 waveform = F.pad(waveform, (0, wave_len - waveform.shape[1]))
             else:
                 waveform = waveform[:, :wave_len]
-            return (audio.contiguous(), gt_depth.contiguous(),
-                    waveform.contiguous())
+            waveform = waveform.contiguous()
+            # Legacy 3-tuple early return for echodiffusion (binaural+CIDE only).
+            # When use_distance_bins=True is also set (echodiffusion_ambi+CIDE
+            # variant), fall through to the ambisonic+bins path below and
+            # return the 6-tuple with the padded waveform appended.
+            if not self.use_distance_bins:
+                return (audio.contiguous(), gt_depth.contiguous(), waveform)
 
         if self.use_ambisonic:
             ambi_path = os.path.join(
@@ -254,12 +306,46 @@ class SoundSpacesDataset(Dataset):
             foa_target = torch.from_numpy(rms)
 
             # Covariance-based energy map -> (1, H, W)
-            R = compute_covariance(ir[:n_ch])
+            # Optional time-window cut (matches BINS_3 boundaries at 44.1 kHz):
+            #   'full'     — full IR (default, legacy)
+            #   'early'    — [0, 2600)      ~0–59 ms   first arrivals
+            #   'mid'      — [2600, 13000)  ~59–295 ms early reflections
+            #   'early_mid'— [0, 13000)     drops diffuse late tail
+            _window = getattr(self.cfg.dataset, 'gt_energy_window', 'full')
+            if _window == 'early':
+                ir_cov = ir[:n_ch, :2600]
+            elif _window == 'mid':
+                ir_cov = ir[:n_ch, 2600:13000]
+            elif _window == 'early_mid':
+                ir_cov = ir[:n_ch, :13000]
+            else:
+                ir_cov = ir[:n_ch]
+            if ir_cov.shape[1] == 0:
+                ir_cov = ir[:n_ch]
+            R = compute_covariance(ir_cov)
             energy = energy_map_from_cov(R, self._sh_basis, h, w).astype(np.float32)
             emax = np.abs(energy).max()
             if emax > 0:
                 energy = energy / emax
             energy_map = torch.from_numpy(energy).unsqueeze(0)
+
+            if self.use_distance_bins:
+                # Per-bin reps computed from the same (possibly rotated) IR
+                # so it's consistent with foa_target/energy_map. Shape
+                # (rep_K, 4); rep_kind=eigen reproduces the n9_0424 Method-E
+                # layout with K=8.
+                rep_gt = self._compute_rep_gt(ir, self._rep_K, self._rep_kind)
+                rep_gt_t = torch.from_numpy(rep_gt)  # (rep_K, 4)
+                if self.use_waveform:
+                    # 6-tuple for echodiffusion_ambi + CIDE: append the padded
+                    # binaural waveform (truncated above to waveform_len). Used
+                    # by _train_step_foa_0415's len(batch)==6 branch.
+                    return (audio.contiguous(), gt_depth.contiguous(),
+                            foa_target.contiguous(), energy_map.contiguous(),
+                            rep_gt_t.contiguous(), waveform)
+                return (audio.contiguous(), gt_depth.contiguous(),
+                        foa_target.contiguous(), energy_map.contiguous(),
+                        rep_gt_t.contiguous())
 
             return (audio.contiguous(), gt_depth.contiguous(),
                     foa_target.contiguous(), energy_map.contiguous())
@@ -269,6 +355,91 @@ class SoundSpacesDataset(Dataset):
     def _load_foa_ir(self, ambi_path, sample_idx):
         """Load raw FOA impulse response. Overridden by rotated subclass."""
         return np.load(ambi_path).astype(np.float64)
+
+    # n9_0424 / n3_0425 -------------------------------------------------------
+    # Round-trip distance bins in metres. K=8 default → 9 edges (matches
+    # n9_0424). Times are derived as t = 2·d / c where c=343 m/s.
+    # End-of-range = 10 m round-trip ≈ 2570 samples at 44.1 kHz; this is the
+    # span for non-default K (equal-time linear edges).
+    _DISTANCE_BINS_M = (0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 10.0)
+    _SPEED_OF_SOUND = 343.0
+
+    def _compute_distance_bin_edges(self, K=None):
+        """Round-trip-time edges (in samples) for K bins.
+
+        K=8 (default) → geometric distance bins (0.2, 0.5, …, 10.0 m), the
+        original layout used by n9_0424.
+        Other K → equal-time linear edges over the SAME total range used
+        by n9 (round-trip 0.2 m → 10.0 m, ≈ samples 51 → 2571 at 44.1 kHz).
+        Samples [0, 51) are skipped — sound hasn't reached anything yet —
+        and samples beyond 2571 (long reverb tail) are excluded, matching
+        n9_0424's exclusion. This keeps the input window identical across
+        K values so the predictability-vs-N comparison is apples-to-apples.
+        """
+        sr = self._distance_bins_sr
+        if K is None:
+            K = len(self._DISTANCE_BINS_M) - 1
+        if K == 8:
+            return tuple(int(round(2.0 * d * sr / self._SPEED_OF_SOUND))
+                         for d in self._DISTANCE_BINS_M)
+        T_min = int(round(2.0 * self._DISTANCE_BINS_M[0] * sr
+                          / self._SPEED_OF_SOUND))
+        T_max = int(round(2.0 * self._DISTANCE_BINS_M[-1] * sr
+                          / self._SPEED_OF_SOUND))
+        span = T_max - T_min
+        return tuple(int(round(T_min + i * span / K))
+                     for i in range(K + 1))
+
+    def _compute_rep_gt(self, ir: np.ndarray, K: int = None,
+                        kind: str = 'eigen') -> np.ndarray:
+        """Per-bin FOA representatives.
+
+        Parameters
+        ----------
+        ir   : (≥4, T_total) FOA impulse response in ACN [W, Y, Z, X].
+        K    : bin count. None → use ``self._rep_K`` (default 8).
+        kind : 'eigen' (Method-E top eigenvector × √λ) or
+               'rms'   (per-channel RMS within each bin).
+
+        Returns ``(K, 4) float32``. Empty / rank-deficient bins are zeros.
+        """
+        n_ch = 4
+        T_total = ir.shape[1]
+        if K is None:
+            K = self._rep_K
+        # Bin edges may have been precomputed for the configured K. If a
+        # different K is requested at call time (e.g. from a derived class),
+        # recompute on the fly.
+        if K == self._rep_K:
+            edges = self._distance_bins_edges
+        else:
+            edges = self._compute_distance_bin_edges(K)
+        rep = np.zeros((K, n_ch), dtype=np.float32)
+        for k in range(K):
+            s_k, e_k = edges[k], edges[k + 1]
+            if s_k >= T_total:
+                continue
+            e_k = min(e_k, T_total)
+            A_k = ir[:n_ch, s_k:e_k]
+            T_k = A_k.shape[1]
+            if T_k < 1:
+                continue
+            if kind == 'rms':
+                # √(mean(a^2)) per channel — channel-wise energy summary.
+                rep[k] = np.sqrt(np.mean(A_k ** 2, axis=1)).astype(np.float32)
+            else:  # 'eigen' — dominant eigenvector × √λ_max
+                if T_k < 2:
+                    continue
+                R_k = (A_k @ A_k.T) / T_k
+                lam, V = np.linalg.eigh(R_k)
+                lam_max = float(lam[-1])
+                v_max = V[:, -1]
+                if v_max[0] < 0:
+                    v_max = -v_max
+                if lam_max <= 0:
+                    continue
+                rep[k] = (np.sqrt(lam_max) * v_max).astype(np.float32)
+        return rep
 
     def _get_spectrogram(self, waveform, n_fft=512, power=1.0, win_length=64, hop_length=16):
         spectrogram = T.Spectrogram(n_fft=n_fft, win_length=win_length,
