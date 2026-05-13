@@ -32,6 +32,7 @@ from models import (
     N3_0425Net,
     N9_0425Net,
     N9_0426Net,
+    EchoRangeDepth,
     DepthLoss, FOAGuidedLoss, SHHistogramAlignmentLoss, AudioDepthFOALoss,
 )
 
@@ -249,6 +250,17 @@ def is_n3_0425_model(cfg):
     plus an optional cosine direction term (eigen variants only).
     """
     return getattr(cfg.model, 'name', '') == 'n3_0425'
+
+
+def is_echorange_model(cfg):
+    """echorange — EchoDiffusion backbone with a switchable depth head.
+
+    Routes via _train_step_echorange. Forward signature is the same as
+    EchoDiffusion (audio_spec, audio_wave) but returns a dict that always
+    contains 'pred_depth'. With depth_head_type='scalar' the model is
+    behaviourally identical to plain echodiffusion.
+    """
+    return getattr(cfg.model, 'name', '') == 'echorange'
 
 
 def is_foa_model(cfg):
@@ -472,6 +484,26 @@ def build_model(cfg, gpu_ids):
             max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
             embed_dim=getattr(cfg.model, 'embed_dim', 192),
             emb_dim=getattr(cfg.model, 'emb_dim', 768),
+        )
+        if len(gpu_ids) > 0:
+            assert torch.cuda.is_available()
+            net = net.to(gpu_ids[0])
+            net = nn.DataParallel(net, gpu_ids)
+        return net
+    elif model_name == 'echorange':
+        # EchoDiffusion backbone + switchable scalar/range/hazard depth head.
+        # depth_head_type='scalar' (default) reproduces echodiffusion exactly.
+        net = EchoRangeDepth(
+            max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
+            embed_dim=getattr(cfg.model, 'embed_dim', 192),
+            emb_dim=getattr(cfg.model, 'emb_dim', 768),
+            depth_head_type=str(getattr(cfg.model, 'depth_head_type', 'scalar')),
+            range_num_bins=int(getattr(cfg.model, 'range_num_bins', 64)),
+            range_bin_spacing=str(getattr(cfg.model, 'range_bin_spacing', 'log')),
+            range_min_depth=float(getattr(cfg.model, 'range_min_depth', 0.1)),
+            range_max_depth=float(getattr(cfg.model, 'range_max_depth', 20.0)),
+            range_output_mode=str(getattr(cfg.model, 'range_output_mode', 'expectation')),
+            hazard_bias_init=float(getattr(cfg.model, 'hazard_bias_init', -4.6)),
         )
         if len(gpu_ids) > 0:
             assert torch.cuda.is_available()

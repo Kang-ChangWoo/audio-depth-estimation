@@ -1,0 +1,139 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+============================================================
+Model: echorange  Dataset: soundspaces
+BS: 48  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_c7ed256fbb9b.json) [waveform=ON]
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_89df6a83b017.json) [waveform=ON]
+Train: 23560, Val: 2951
+Loading weights:   0%|          | 0/210 [00:00<?, ?it/s]Loading weights: 100%|██████████| 210/210 [00:00<00:00, 7325.62it/s]
+[transformers] [1mWav2Vec2Model LOAD REPORT[0m from: facebook/wav2vec2-base-960h
+Key               | Status     | 
+------------------+------------+-
+lm_head.bias      | UNEXPECTED | 
+lm_head.weight    | UNEXPECTED | 
+masked_spec_embed | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+Model: echorange (132.6M params)
+  [train] epoch 1 step 200/491 (178s)
+  [train] epoch 1 step 400/491 (353s)
+Epoch [1/20] L:3.0765 D:0.4130 432s
+  [train] epoch 2 step 200/491 (175s)
+  [train] epoch 2 step 400/491 (349s)
+Epoch [2/20] L:2.9044 D:0.3530 429s
+  [val] starting (62 batches)
+  [val] 50/62 (26s)
+  [val] done (62 batches, 32s)
+  Val L:0.2518 ABS:0.4699 RMSE:1.4282 d1:0.4927
+  >> Best score:1.1407 RMSE:1.4282 ABS:0.4699
+  >> Best Delta1:0.4927
+  [train] epoch 3 step 200/491 (174s)
+  [train] epoch 3 step 400/491 (348s)
+Epoch [3/20] L:2.8416 D:0.3336 428s
+  [train] epoch 4 step 200/491 (175s)
+  [train] epoch 4 step 400/491 (349s)
+Epoch [4/20] L:2.8048 D:0.3228 429s
+  [val] starting (62 batches)
+  [val] 50/62 (26s)
+  [val] done (62 batches, 33s)
+  Val L:0.2428 ABS:0.4270 RMSE:1.4177 d1:0.5006
+  >> Best score:1.1205 RMSE:1.4177 ABS:0.4270
+  >> Best Delta1:0.5006
+  [train] epoch 5 step 200/491 (175s)
+  [train] epoch 5 step 400/491 (349s)
+Epoch [5/20] L:2.7742 D:0.3132 428s
+  [train] epoch 6 step 200/491 (174s)
+  [train] epoch 6 step 400/491 (349s)
+Epoch [6/20] L:2.7420 D:0.3027 428s
+  [val] starting (62 batches)
+  [val] 50/62 (26s)
+  [val] done (62 batches, 32s)
+  Val L:0.2407 ABS:0.4553 RMSE:1.3746 d1:0.5234
+  >> Best score:1.0988 RMSE:1.3746 ABS:0.4553
+  >> Best Delta1:0.5234
+  [train] epoch 7 step 200/491 (175s)
+  [train] epoch 7 step 400/491 (350s)
+Epoch [7/20] L:2.7136 D:0.2928 429s
+  [train] epoch 8 step 200/491 (175s)
+  [train] epoch 8 step 400/491 (351s)
+Epoch [8/20] L:2.6797 D:0.2796 430s
+  [val] starting (62 batches)
+  [val] 50/62 (27s)
+  [val] done (62 batches, 33s)
+  Val L:0.2353 ABS:0.4604 RMSE:1.3527 d1:0.5372
+  >> Best score:1.0850 RMSE:1.3527 ABS:0.4604
+  >> Best Delta1:0.5372
+  [train] epoch 9 step 200/491 (175s)
+  [train] epoch 9 step 400/491 (350s)
+Epoch [9/20] L:2.6473 D:0.2678 430s
+  [train] epoch 10 step 200/491 (176s)
+  [train] epoch 10 step 400/491 (353s)
+Epoch [10/20] L:2.6112 D:0.2542 433s
+  [val] starting (62 batches)
+  [val] 50/62 (27s)
+  [val] done (62 batches, 33s)
+  Val L:0.2397 ABS:0.4709 RMSE:1.3740 d1:0.5218
+  [train] epoch 11 step 200/491 (177s)
+  [train] epoch 11 step 400/491 (353s)
+Epoch [11/20] L:2.5747 D:0.2400 433s
+  [train] epoch 12 step 200/491 (176s)
+  [train] epoch 12 step 400/491 (352s)
+Epoch [12/20] L:2.5399 D:0.2277 433s
+  [val] starting (62 batches)
+  [val] 50/62 (26s)
+  [val] done (62 batches, 32s)
+  Val L:0.2445 ABS:0.4406 RMSE:1.3920 d1:0.5269
+  >> Best ABS_REL:0.4406
+  [train] epoch 13 step 200/491 (176s)
+  [train] epoch 13 step 400/491 (351s)
+Epoch [13/20] L:2.5067 D:0.2163 430s
+  [train] epoch 14 step 200/491 (176s)
+  [train] epoch 14 step 400/491 (351s)
+Epoch [14/20] L:2.4757 D:0.2059 431s
+  [val] starting (62 batches)
+  [val] 50/62 (27s)
+  [val] done (62 batches, 33s)
+  Val L:0.2453 ABS:0.4371 RMSE:1.3958 d1:0.5314
+  >> Best ABS_REL:0.4371
+  [train] epoch 15 step 200/491 (174s)
+  [train] epoch 15 step 400/491 (349s)
+Epoch [15/20] L:2.4419 D:0.1955 428s
+  [train] epoch 16 step 200/491 (175s)
+  [train] epoch 16 step 400/491 (350s)
+Epoch [16/20] L:2.4124 D:0.1868 429s
+  [val] starting (62 batches)
+  [val] 50/62 (27s)
+  [val] done (62 batches, 33s)
+  Val L:0.2459 ABS:0.4235 RMSE:1.3981 d1:0.5334
+  >> Best ABS_REL:0.4235
+  [train] epoch 17 step 200/491 (176s)
+  [train] epoch 17 step 400/491 (351s)
+Epoch [17/20] L:2.3839 D:0.1786 430s
+  [train] epoch 18 step 200/491 (176s)
+  [train] epoch 18 step 400/491 (350s)
+Epoch [18/20] L:2.3557 D:0.1715 430s
+  [val] starting (62 batches)
+  [val] 50/62 (28s)
+  [val] done (62 batches, 34s)
+  Val L:0.2548 ABS:0.4396 RMSE:1.4117 d1:0.5325
+  [train] epoch 19 step 200/491 (176s)
+  [train] epoch 19 step 400/491 (351s)
+Epoch [19/20] L:2.3322 D:0.1654 431s
+  [train] epoch 20 step 200/491 (175s)
+  [train] epoch 20 step 400/491 (351s)
+Epoch [20/20] L:2.3051 D:0.1585 431s
+  [val] starting (62 batches)
+  [val] 50/62 (27s)
+  [val] done (62 batches, 33s)
+  Val L:0.2497 ABS:0.4708 RMSE:1.3982 d1:0.5356
+
+Done. Best score:1.0850@ep8  RMSE:1.3527@ep-1  ABS:0.4235@ep16  D1:0.5372@ep8

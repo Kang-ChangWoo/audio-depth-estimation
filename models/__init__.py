@@ -38,6 +38,7 @@ from .n3_0425 import N3_0425Net
 from .n9_0425 import N9_0425Net
 from .n9_0426 import N9_0426Net
 from .echodiffusion import EchoDiffusion, EchoDiffusionAmbi, EchoDiffusionAmbiSH
+from .bin_based import EchoRangeDepth, RangeDepthHead, soft_range_nll_loss
 from .n2_0427 import EchoDiffusionSHSide, EchoDiffusionSHSidePlus
 from .echonet import EchoNet
 from .batvision import BatVisionUNet

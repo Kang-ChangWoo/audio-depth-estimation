@@ -1,0 +1,66 @@
+# ============================================================
+# echorange — EchoDiffusion backbone + switchable depth head.
+#
+# depth_head_type='scalar' (default) reproduces echodiffusion exactly.
+# depth_head_type='range'  emits a per-pixel softmax over Br depth bins
+#                          and recovers depth as the expectation.
+#
+# See models/bin_based/{range_head,echorange}.py.
+# ============================================================
+dataset:
+  name: soundspaces
+  dataset_dir: /root/storage/matterport3d_0303renew
+  split_ratio: [0.8, 0.1, 0.1]
+  split_seed: 42
+  input_type: echoes
+  audio_format: spectrogram
+  depth_type: erp
+  preprocess: resize
+  depth_norm: true
+  images_size: [256, 512]
+  min_depth: 0.01
+  max_depth: 10.0
+  use_ambisonic: false
+  use_waveform: true
+  waveform_len: 5648
+
+model:
+  name: echorange
+  generator: echorange
+  max_depth: 10.0
+  embed_dim: 192
+  emb_dim: 768
+  # ── EchoRange head ──
+  depth_head_type: scalar       # 'scalar' (=baseline) or 'range'
+  range_num_bins: 64
+  range_bin_spacing: log        # 'log' or 'linear'
+  range_min_depth: 0.1
+  range_max_depth: 10.0
+  range_soft_label_sigma: 0.08
+  range_output_mode: expectation  # 'expectation' or 'median'
+  lambda_range_nll: 1.0
+  lambda_berhu: 1.0
+  lambda_silog: 1.0
+  lambda_entropy_smooth: 0.0
+
+train:
+  checkpoints: null
+  saving_checkpoints: 5
+  epochs: 20
+  learning_rate: 0.0001
+  optimizer: AdamW
+  validation: true
+  validation_iter: 2
+  num_threads: 4
+  batch_size: 32
+  shuffle: true
+  use_berhu: true
+  use_silog: true
+  w_berhu: 1.0
+  w_silog: 0.5
+
+test:
+  eval_on: test
+  checkpoints: best
+  num_threads: 4
+  batch_size: 1

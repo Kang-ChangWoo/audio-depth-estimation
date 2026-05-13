@@ -2,6 +2,7 @@
 """Training script for audio-to-depth estimation."""
 
 import argparse
+import math
 import os
 import time
 
@@ -15,7 +16,7 @@ from utils.train_utils import (
     is_foa_model, is_foa_variant_model,
     is_echodiffusion_model, is_foa_v2_js_model, is_foa_0415_model,
     is_foa_v2_js_rgb_model, is_foa_oracle_model, is_n2_model, is_emap_temporal_model,
-    is_n3_0425_model,
+    is_n3_0425_model, is_echorange_model,
     compute_gt_depth_sh, compute_gt_energy_sh, set_sh_branch_frozen,
 )
 import torch.nn.functional as F
@@ -48,6 +49,471 @@ def _train_step_echodiffusion(model, batch, criterion, optimizer, cfg, device):
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
     optimizer.step()
     return {'total': loss.item(), 'depth': loss.item()}
+
+
+def _hazard_diagnostics(raw_out, gt_norm, cfg, prefix='[haz]'):
+    """One-shot hazard-head diagnostics on a single (val) batch.
+
+    Prints alpha distribution, bg_weight stats, argmax-bin histogram,
+    rendered-weight entropy, and depth-bin sliced error so we can see
+    *why* a hazard cell is failing without re-running with viz dumps.
+
+    Cheap by construction (one batch per val pass, all torch ops).
+    """
+    if raw_out is None or 'hazard_alpha' not in raw_out:
+        return
+    a   = raw_out['hazard_alpha'].detach().float()      # (B, R, h, w)
+    bg  = raw_out['hazard_bg_weight'].detach().float()  # (B, 1, h, w)
+    w   = raw_out['hazard_weights'].detach().float()    # (B, R, h, w)
+    R   = a.shape[1]
+
+    # torch.quantile has a CUDA hard cap (~2^24 elements); a_flat at
+    # B=32,R=32,H=W=256 is ~67M and overflows. Subsample for diagnostics.
+    def _quantile_safe(t, qs, max_n=4_000_000):
+        t = t.reshape(-1)
+        if t.numel() > max_n:
+            idx = torch.randint(0, t.numel(), (max_n,), device=t.device)
+            t = t[idx]
+        return torch.quantile(t, qs)
+
+    a_flat = a.reshape(-1)
+    qs = torch.tensor([0.5, 0.9, 0.95, 0.99], device=a.device)
+    a_q = _quantile_safe(a_flat, qs).cpu().tolist()
+    fracs = [(a > t).float().mean().item() for t in (0.5, 0.9, 0.95, 0.99)]
+
+    bg_flat = bg.reshape(-1)
+    bg_q = _quantile_safe(
+        bg_flat,
+        torch.tensor([0.1, 0.5, 0.9], device=bg.device),
+    ).cpu().tolist()
+
+    argmax = w.argmax(dim=1).reshape(-1)
+    hist = torch.bincount(argmax, minlength=R).cpu().tolist()
+    # Compact histogram print: fold to ≤12 buckets so logs stay readable.
+    fold = max(1, R // 12)
+    folded = [sum(hist[i:i+fold]) for i in range(0, R, fold)]
+    total = max(1, sum(folded))
+    folded_pct = [f"{100.0*v/total:.1f}" for v in folded]
+
+    ent = raw_out.get('range_entropy')
+    ent_str = ""
+    if ent is not None:
+        e_flat = ent.detach().float().reshape(-1)
+        e_q = _quantile_safe(
+            e_flat,
+            torch.tensor([0.1, 0.5, 0.9], device=e_flat.device),
+        ).cpu().tolist()
+        ent_str = (f"  ent: p10={e_q[0]:.3f} p50={e_q[1]:.3f} "
+                   f"p90={e_q[2]:.3f}")
+
+    print(f"{prefix} alpha: mean={a_flat.mean().item():.4f} "
+          f"p50={a_q[0]:.4f} p90={a_q[1]:.4f} p95={a_q[2]:.4f} p99={a_q[3]:.4f}",
+          flush=True)
+    print(f"{prefix} frac_alpha: >.5={fracs[0]:.3f} >.9={fracs[1]:.3f} "
+          f">.95={fracs[2]:.3f} >.99={fracs[3]:.3f}", flush=True)
+    print(f"{prefix} bg_weight: p10={bg_q[0]:.3f} p50={bg_q[1]:.3f} "
+          f"p90={bg_q[2]:.3f}{ent_str}", flush=True)
+    print(f"{prefix} argmax_bin_hist (folded {R}→{len(folded)}, %): "
+          f"[{', '.join(folded_pct)}]", flush=True)
+
+    # ── Depth-bin sliced ABS_REL on this batch (raw, no clip) ────────
+    # gt_norm is (B,1,H,W) in [0,1]. Lift back to metres for slicing.
+    md = float(cfg.dataset.max_depth)
+    pred_m = raw_out['pred_depth'].detach().float()    # already metres
+    if pred_m.shape[-2:] != gt_norm.shape[-2:]:
+        # rare: hazard pred upsampled inside head, but be safe.
+        pred_m = F.interpolate(pred_m, size=gt_norm.shape[-2:], mode='nearest')
+    gt_m = gt_norm.detach().float() * md
+    diff = (pred_m - gt_m).abs()
+    bands = [(0.1, 1.0), (1.0, 3.0), (3.0, 6.0), (6.0, 9.8), (9.8, md + 1e-3)]
+    parts = []
+    for lo, hi in bands:
+        m = (gt_m >= lo) & (gt_m < hi)
+        if m.any():
+            ar  = (diff[m] / gt_m[m].clamp(min=1e-3)).mean().item()
+            rms = (diff[m].pow(2).mean().sqrt()).item()
+            parts.append(f"[{lo:g},{hi:g}) AR={ar:.3f} RMSE={rms:.3f}")
+        else:
+            parts.append(f"[{lo:g},{hi:g}) -")
+    print(f"{prefix} sliced: " + "  ".join(parts), flush=True)
+
+
+def _train_step_echorange(model, batch, criterion, optimizer, cfg, device,
+                          epoch: int = 1):
+    """EchoRange — scalar baseline OR distribution / hazard head.
+
+    Three head modes share this train step (selected by
+    ``cfg.model.depth_head_type``):
+
+      scalar : L = BerHu + SILog (criterion as usual on out['pred_depth']).
+      range  : L = λ_NLL · soft_range_nll(logits, gt, bins, σ)
+                 + λ_BerHu · BerHu(pred_depth, gt) + λ_SILog · SILog(...)
+                 + λ_ent · mean(range_entropy)
+      hazard : L = λ_hit_eff · L_hit + λ_free_eff · L_free
+                 + λ_BerHu · BerHu(pred_depth, gt) + λ_SILog · SILog(...)
+               where (λ_hit_eff, λ_free_eff) follow a 2-stage warmup:
+                 epoch ≤ hazard_warmup_epochs : (λ_hit_warm, λ_free_warm)
+                 epoch >  hazard_warmup_epochs: (λ_hit,      λ_free)
+
+    Ablation flags (cfg.model.*):
+      disable_hit_loss   — force λ_hit = 0   (free-only).
+      disable_free_loss  — force λ_free = 0  (hit-only).
+      hazard_depth_only  — force λ_hit = λ_free = 0; train the renderer
+                           through BerHu/SILog alone.
+
+    Either way, ``out['pred_depth']`` is what downstream metrics use.
+    """
+    from models.bin_based import (
+        soft_range_nll_loss, hazard_supervision_loss,
+        rendered_event_nll, survival_loss, soft_hit_bce_loss,
+        hazard_free_loss, soft_quantile_depth, spherical_sh_loss,
+    )
+    from models.losses import BerHuLoss, SILogLoss
+
+    audio, gtdepth, waveform = batch
+    audio = audio.to(device)
+    gtdepth = gtdepth.to(device)
+    waveform = waveform.to(device)
+
+    optimizer.zero_grad()
+    out = model(audio, waveform)
+    pred_depth = out['pred_depth']
+
+    if 'range_logits' not in out:
+        # scalar path — exact echodiffusion baseline.
+        loss = criterion(pred_depth, gtdepth)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        optimizer.step()
+        return {'total': loss.item(), 'depth': loss.item()}
+
+    # ── Common preamble for range AND hazard heads ─────────────────────
+    head_type = str(getattr(cfg.model, 'depth_head_type', 'range'))
+
+    # NB: dataset.depth_norm=true normalises GT to [0, 1]; both range and
+    # hazard heads operate in raw metres on the bin grid. Rescale GT.
+    if getattr(cfg.dataset, 'depth_norm', False):
+        gtdepth_m = gtdepth * float(cfg.dataset.max_depth)
+    else:
+        gtdepth_m = gtdepth
+
+    range_bins = (model.module.range_head.range_bins
+                  if hasattr(model, 'module')
+                  else model.range_head.range_bins)
+    logits = out['range_logits']
+
+    # Match GT to logits resolution for per-bin losses (downsampling GT
+    # is cheaper than upsampling Br-channel logits to (256, 512)).
+    if gtdepth_m.shape[-2:] != logits.shape[-2:]:
+        gt_for_nll = F.interpolate(
+            gtdepth_m, size=logits.shape[-2:], mode='nearest')
+    else:
+        gt_for_nll = gtdepth_m
+
+    # ERP-aware extras (shared between range and hazard):
+    #   erp_far_mask       : exclude pixels at GT >= range_max_depth (ceiling
+    #                        saturation in radial ERP) so they don't pile up
+    #                        on the last bin and skew the distribution.
+    #   erp_cos_lat_weight : weight per-pixel loss by cos(latitude) so
+    #                        polar pixels (oversampled in ERP) don't dominate.
+    far_mask_flag = bool(getattr(cfg.model, 'erp_far_mask', False))
+    cos_lat_flag  = bool(getattr(cfg.model, 'erp_cos_lat_weight', False))
+
+    far_valid = None
+    if far_mask_flag:
+        r_max_m = float(getattr(cfg.model, 'range_max_depth', cfg.dataset.max_depth))
+        far_valid = (gt_for_nll > 0) & (gt_for_nll < r_max_m)
+
+    pix_w = None
+    if cos_lat_flag:
+        H = gt_for_nll.shape[-2]
+        # latitude per row centre, top-row = +π/2, bottom-row = -π/2.
+        lat = (math.pi / 2.0) - math.pi * (torch.arange(H, device=device) + 0.5) / H
+        pix_w = torch.cos(lat).clamp(min=1e-3)         # (H,)
+
+    # ── Cylindrical bin-axis support (round 5 patch) ───────────────────
+    # The bin grid can represent radial depth (default), horizontal
+    # ρ_xy = D·cos(lat), or vertical |z| = D·|sin(lat)|. This is a
+    # bin-axis-only swap (analysis doc level (1)): GT is internally
+    # projected onto the chosen axis for the per-bin NLL/event loss, and
+    # the head's pred_depth is projected back to radial before BerHu /
+    # SILog / SH so the eval pipeline (radial RMSE) stays consistent.
+    range_bin_axis = str(getattr(cfg.model, 'range_bin_axis', 'radial'))
+    cyl_min_factor = float(
+        getattr(cfg.model, 'cyl_min_axis_factor', 0.15))
+    if range_bin_axis == 'radial':
+        axis_factor_orig = None
+        axis_factor_nll = None
+    else:
+        H_orig = gtdepth.shape[-2]
+        H_nll = logits.shape[-2]
+        # Pixel-centre latitude. Top row = +π/2, bottom row = −π/2.
+        lat_orig = (math.pi / 2.0) - math.pi * (
+            torch.arange(H_orig, device=device).float() + 0.5) / H_orig
+        lat_nll = (math.pi / 2.0) - math.pi * (
+            torch.arange(H_nll, device=device).float() + 0.5) / H_nll
+        if range_bin_axis == 'horizontal':
+            f_orig = torch.cos(lat_orig).clamp(min=cyl_min_factor)
+            f_nll = torch.cos(lat_nll).clamp(min=cyl_min_factor)
+        elif range_bin_axis == 'z':
+            f_orig = torch.sin(lat_orig).abs().clamp(min=cyl_min_factor)
+            f_nll = torch.sin(lat_nll).abs().clamp(min=cyl_min_factor)
+        else:
+            raise ValueError(
+                f"range_bin_axis must be one of 'radial', 'horizontal', "
+                f"'z'; got {range_bin_axis!r}")
+        axis_factor_orig = f_orig.view(1, 1, -1, 1)         # (1,1,H,1)
+        axis_factor_nll = f_nll.view(1, 1, -1, 1)
+        # Project GT (radial metres) → bin-axis metres for NLL.
+        gt_for_nll = gt_for_nll * axis_factor_nll
+        # Polar / equatorial pixels with axis_factor at the clamp floor
+        # have ambiguous bin-axis meaning. Mask them out from the NLL too.
+        polar_mask_nll = (axis_factor_nll > cyl_min_factor + 1e-6)
+        if far_valid is None:
+            far_valid = polar_mask_nll.expand_as(gt_for_nll)
+        else:
+            far_valid = far_valid & polar_mask_nll.expand_as(far_valid)
+
+    # ── Per-head loss term ─────────────────────────────────────────────
+    lam_b   = float(getattr(cfg.model, 'lambda_berhu', 1.0))
+    lam_s   = float(getattr(cfg.model, 'lambda_silog', 1.0))
+    lam_ent = float(getattr(cfg.model, 'lambda_entropy_smooth', 0.0))
+
+    if head_type == 'range':
+        sigma = float(getattr(cfg.model, 'range_soft_label_sigma', 0.08))
+        nll = soft_range_nll_loss(
+            logits, gt_for_nll, range_bins,
+            valid_mask=far_valid, sigma=sigma, weights=pix_w)
+        lam_nll = float(getattr(cfg.model, 'lambda_range_nll', 1.0))
+        head_loss = lam_nll * nll
+        head_metrics = {'range_nll': float(nll.item())}
+
+        # ── Optional differentiable soft-quantile auxiliary loss (round 5).
+        # Hard quantile / median cuts gradient flow from depth loss to
+        # logits; soft_quantile_depth keeps it alive. Used to imitate the
+        # round-2 exp907 *median* gain in a gradient-friendly way without
+        # giving up the expectation-trained anchor.
+        lam_sq = float(getattr(cfg.model, 'lambda_soft_quantile', 0.0))
+        if lam_sq > 0.0:
+            sq_q = float(getattr(cfg.model, 'soft_quantile_q', 0.5))
+            sq_tau = float(getattr(cfg.model, 'soft_quantile_tau', 0.05))
+            pred_q_axis = soft_quantile_depth(
+                logits=logits, range_bins=range_bins,
+                q=sq_q, tau=sq_tau)                          # (B,1,h,w) bin-axis
+            # Resample to GT resolution and project bin-axis → radial.
+            if pred_q_axis.shape[-2:] != gtdepth.shape[-2:]:
+                pred_q_axis = F.interpolate(
+                    pred_q_axis, size=gtdepth.shape[-2:], mode='nearest')
+            if axis_factor_orig is not None:
+                pred_q_radial = pred_q_axis / axis_factor_orig
+            else:
+                pred_q_radial = pred_q_axis
+            # Match the BerHu/SILog scale convention.
+            if getattr(cfg.dataset, 'depth_norm', False):
+                pred_q_norm = (pred_q_radial /
+                               float(cfg.dataset.max_depth)).clamp(min=1e-6)
+                gt_q_norm = gtdepth
+            else:
+                pred_q_norm = pred_q_radial
+                gt_q_norm = gtdepth
+            q_berhu = BerHuLoss().to(device)(pred_q_norm, gt_q_norm)
+            q_silog = SILogLoss().to(device)(pred_q_norm, gt_q_norm)
+            q_loss = q_berhu + q_silog
+            head_loss = head_loss + lam_sq * q_loss
+            head_metrics.update({
+                'soft_quantile_loss': float(q_loss.item()),
+                'soft_quantile_q': sq_q,
+                'soft_quantile_tau': sq_tau,
+            })
+    elif head_type == 'hazard':
+        # ── Smooth aux-weight ramp (replaces round-3's discontinuous jump).
+        # progress = min(1, epoch / ramp_epochs). At epoch ≤ ramp_epochs the
+        # primary aux weight scales from 1/ramp_epochs up to its target;
+        # afterwards it stays at the target. The round-3 epoch-3→4 jump
+        # (0.3 → 0.5 in λ_hit) was identified as the failure trigger.
+        ramp_ep = max(1, int(getattr(cfg.model, 'hazard_warmup_epochs', 3)))
+        ramp_progress = min(1.0, float(epoch) / float(ramp_ep))
+
+        lam_aux_target  = float(getattr(cfg.model, 'lambda_hit',  0.10))
+        lam_free_target = float(getattr(cfg.model, 'lambda_free', 0.05))
+        lam_aux  = ramp_progress * lam_aux_target
+        lam_free = ramp_progress * lam_free_target
+
+        # Ablation flags (compose freely with mode below).
+        if bool(getattr(cfg.model, 'hazard_depth_only', False)):
+            lam_aux = lam_free = 0.0
+        if bool(getattr(cfg.model, 'disable_hit_loss', False)):
+            lam_aux = 0.0
+        if bool(getattr(cfg.model, 'disable_free_loss', False)):
+            lam_free = 0.0
+
+        # ── Mode dispatch — round 4 introduces three new aux losses on top
+        # of the round-3 raw α-hit BCE. ``--hazard-aux-mode`` selects which.
+        #   raw_hit    : original BCE(α, target=1) on hit bins (round 3, kept
+        #                for failure-signature reproduction).
+        #   event_nll  : NLL of rendered first-hit weight w_j vs soft Gaussian
+        #                target q_j over log-bin space (round 4 main).
+        #   survival   : BCE on cumulative survival S_j = P(D > r_j).
+        #   soft_hit   : BCE(α, target=0.75) on hit bins — saturation guard.
+        aux_mode = str(getattr(cfg.model, 'hazard_aux_mode', 'raw_hit'))
+        far_thresh = float(getattr(cfg.model, 'hazard_far_thresh', 9.8))
+        sigma_bins = float(getattr(cfg.model, 'hazard_event_sigma_bins', 1.0))
+        tau_bins   = float(getattr(cfg.model, 'hazard_survival_tau_bins', 1.0))
+        soft_hit_t = float(getattr(cfg.model, 'hazard_soft_hit_target', 0.75))
+        log_delta_cfg = getattr(cfg.model, 'hazard_log_delta', None)
+        log_delta = float(log_delta_cfg) if log_delta_cfg is not None else None
+
+        # The far-censored constraint is enforced *inside* the new losses
+        # (event/surv/soft_hit) via far_thresh, so we don't compose it
+        # with the existing far_valid (which uses range_max_depth=10.0).
+        # For raw_hit we keep the round-3 behaviour (far_valid as-is).
+        primary_loss = logits.sum() * 0.0
+        primary_name = 'aux'
+        if lam_aux > 0.0:
+            if aux_mode == 'raw_hit':
+                haz = hazard_supervision_loss(
+                    logits, gt_for_nll, range_bins,
+                    log_delta=log_delta,
+                    valid_mask=far_valid, weights=pix_w,
+                    use_hit=True, use_free=False,
+                )
+                primary_loss = haz['hit']
+                primary_name = 'hit_raw'
+            elif aux_mode == 'event_nll':
+                primary_loss = rendered_event_nll(
+                    logits, gt_for_nll, range_bins,
+                    valid_mask=far_valid, weights=pix_w,
+                    sigma_bins=sigma_bins, far_thresh=far_thresh,
+                )
+                primary_name = 'event_nll'
+            elif aux_mode == 'survival':
+                primary_loss = survival_loss(
+                    logits, gt_for_nll, range_bins,
+                    valid_mask=far_valid, weights=pix_w,
+                    tau_bins=tau_bins, far_thresh=far_thresh,
+                )
+                primary_name = 'survival'
+            elif aux_mode == 'soft_hit':
+                primary_loss = soft_hit_bce_loss(
+                    logits, gt_for_nll, range_bins,
+                    log_delta=log_delta, soft_target=soft_hit_t,
+                    valid_mask=far_valid, weights=pix_w,
+                    far_thresh=far_thresh,
+                )
+                primary_name = 'hit_soft'
+            else:
+                raise ValueError(
+                    f"Unknown hazard_aux_mode: {aux_mode!r}. "
+                    f"Expected one of: raw_hit, event_nll, survival, soft_hit.")
+
+        # Free loss is shared across raw_hit / event_nll / soft_hit. Survival
+        # already encodes free-space behaviour through its cumulative target,
+        # so combining with explicit free is redundant — skip in that mode.
+        l_free = logits.sum() * 0.0
+        if lam_free > 0.0 and aux_mode != 'survival':
+            l_free = hazard_free_loss(
+                logits, gt_for_nll, range_bins,
+                log_delta=log_delta,
+                valid_mask=far_valid, weights=pix_w,
+                far_thresh=far_thresh,
+            )
+
+        head_loss = lam_aux * primary_loss + lam_free * l_free
+        head_metrics = {
+            f'hazard_{primary_name}': float(primary_loss.item()),
+            'hazard_free':            float(l_free.item()),
+            'hazard_lam_aux':         lam_aux,
+            'hazard_lam_free':        lam_free,
+            'hazard_aux_mode':        aux_mode,
+        }
+    else:
+        raise ValueError(
+            f"Unknown depth_head_type for echorange: {head_type!r}. "
+            f"Expected 'scalar', 'range', or 'hazard'.")
+
+    # ── BerHu/SILog on rendered depth (shared, both heads) ─────────────
+    # Both range and hazard heads emit depth in metres. If the dataset is
+    # normalised, scale pred down to [0, 1] so the losses live on the same
+    # numerical scale as gt.
+    #
+    # For cylindrical bin-axis configs, the head outputs depth in the
+    # bin-axis (ρ_xy or |z|). Project back to radial for BerHu/SILog/SH so
+    # eval (which measures radial RMSE) sees a radial prediction.
+    if axis_factor_orig is not None:
+        if pred_depth.shape[-2:] == axis_factor_orig.shape[-2:]:
+            pred_radial = pred_depth / axis_factor_orig
+        else:
+            scale = F.interpolate(
+                axis_factor_orig.expand(1, 1, -1, pred_depth.shape[-1]),
+                size=pred_depth.shape[-2:], mode='nearest')
+            pred_radial = pred_depth / scale
+    else:
+        pred_radial = pred_depth
+
+    if getattr(cfg.dataset, 'depth_norm', False):
+        pred_norm = (pred_radial / float(cfg.dataset.max_depth)).clamp(min=1e-6)
+        gt_norm = gtdepth
+    else:
+        pred_norm = pred_radial
+        gt_norm = gtdepth
+
+    # Mask polar pixels out of BerHu/SILog under cylindrical mode by
+    # zeroing GT there — BerHuLoss/SILogLoss skip pixels where gt ≤ 0.
+    if axis_factor_orig is not None:
+        polar_keep = (axis_factor_orig > cyl_min_factor + 1e-6)
+        if polar_keep.shape[-2:] != gt_norm.shape[-2:]:
+            polar_keep = F.interpolate(
+                polar_keep.float().expand(1, 1, -1, gt_norm.shape[-1]),
+                size=gt_norm.shape[-2:], mode='nearest').bool()
+        gt_norm = torch.where(polar_keep, gt_norm, torch.zeros_like(gt_norm))
+
+    berhu = BerHuLoss().to(device)(pred_norm, gt_norm)
+    silog = SILogLoss().to(device)(pred_norm, gt_norm)
+
+    loss = head_loss + lam_b * berhu + lam_s * silog
+    ent_val = 0.0
+    if lam_ent > 0 and 'range_entropy' in out:
+        ent = out['range_entropy'].mean()
+        loss = loss + lam_ent * ent
+        ent_val = float(ent.item())
+
+    # ── Spherical-harmonic auxiliary loss (round 5) ────────────────────
+    # Match low-order SH coefficients of pred and gt depth fields on the
+    # ERP sphere. Both inputs must be in metres, radial. Caller toggles
+    # via cfg.model.lambda_spherical_sh > 0.
+    sh_val = 0.0
+    lam_sh = float(getattr(cfg.model, 'lambda_spherical_sh', 0.0))
+    if lam_sh > 0.0:
+        if getattr(cfg.dataset, 'depth_norm', False):
+            pred_m_for_sh = pred_radial
+            gt_m_for_sh = gtdepth * float(cfg.dataset.max_depth)
+        else:
+            pred_m_for_sh = pred_radial
+            gt_m_for_sh = gtdepth
+        sh_l = spherical_sh_loss(
+            pred_depth_m=pred_m_for_sh,
+            gt_depth_m=gt_m_for_sh,
+            L=int(getattr(cfg.model, 'spherical_sh_order', 2)),
+            use_log_depth=bool(
+                getattr(cfg.model, 'spherical_sh_log_depth', True)),
+        )
+        loss = loss + lam_sh * sh_l
+        sh_val = float(sh_l.item())
+
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    optimizer.step()
+
+    metrics = {
+        'total': float(loss.item()),
+        'depth': float(berhu.item() + silog.item()),
+        'berhu': float(berhu.item()),
+        'silog': float(silog.item()),
+        'entropy': ent_val,
+        'spherical_sh': sh_val,
+    }
+    metrics.update(head_metrics)
+    return metrics
 
 
 def _sh_l1_loss(pred_sh, gt_sh):
@@ -501,7 +967,7 @@ def _train_step_n3_0425(model, batch, criterion, optimizer, cfg, device):
 
 def _val_metrics(model, val_loader, criterion, cfg, device, foa, echodiff,
                  use_hist, foa_frozen, js=False, foa0415=False, js_rgb=False,
-                 foa_oracle=False, n2=False, n3_0425=False):
+                 foa_oracle=False, n2=False, n3_0425=False, echorange=False):
     model.eval()
     errors, val_losses = [], []
     vis_pred, vis_gt = None, None
@@ -651,6 +1117,34 @@ def _val_metrics(model, val_loader, criterion, cfg, device, foa, echodiff,
                                         else (None, None))
                     lv = criterion(out, gtdepth, gt_foa_v,
                                    gt_depth_sh=gt_dsh, gt_depth_sh_coeffs=gt_dsh_c)["total"]
+            elif echorange:
+                audio, gtdepth, waveform = batch
+                audio, gtdepth = audio.to(device), gtdepth.to(device)
+                waveform = waveform.to(device)
+                out = model(audio, waveform)
+                depth_pred = out["pred_depth"]
+                # Hazard diagnostics on the first val batch only — cheap
+                # one-shot dump of α / bg / argmax / sliced metrics.
+                if (bi == 0
+                        and getattr(cfg.model, 'depth_head_type', 'scalar')
+                            == 'hazard'
+                        and 'hazard_alpha' in out):
+                    _hazard_diagnostics(out, gtdepth, cfg)
+                # Range/hazard heads emit metres; the scalar head, after
+                # training against normalised GT, ends up numerically in
+                # [0,1]. The downstream metric path (lines below) multiplies
+                # pred by max_depth under depth_norm=true, so for range/
+                # hazard heads we scale to normalised here so all heads
+                # share the same metric path.
+                if (getattr(cfg.dataset, 'depth_norm', False)
+                        and getattr(cfg.model, 'depth_head_type',
+                                    'scalar') in ('range', 'hazard')):
+                    depth_pred = depth_pred / float(cfg.dataset.max_depth)
+                if getattr(cfg.dataset, 'depth_norm', False):
+                    pred_for_crit = depth_pred.clamp(min=1e-6)
+                else:
+                    pred_for_crit = depth_pred
+                lv = criterion(pred_for_crit, gtdepth)
             elif echodiff:
                 audio, gtdepth, waveform = batch
                 audio, gtdepth = audio.to(device), gtdepth.to(device)
@@ -705,6 +1199,7 @@ def train(cfg):
     js_rgb = is_foa_v2_js_rgb_model(cfg)
     foa = (is_foa_model(cfg) or is_foa_variant_model(cfg)) and not foa0415 and not js_rgb
     echodiff = is_echodiffusion_model(cfg)
+    echorange = is_echorange_model(cfg)
     js = is_foa_v2_js_model(cfg) and not js_rgb
 
     train_set, train_loader = make_dataloader(cfg, 'train', batch_size=cfg.mode.batch_size)
@@ -781,6 +1276,9 @@ def train(cfg):
     use_hist_align = foa and getattr(cfg.model, 'hist_weight', 0) > 0
     best_rmse, best_abs_rel = float('inf'), float('inf')
     best_score = float('inf')  # weighted: 0.7*rmse + 0.3*abs_rel
+    best_delta1 = -float('inf')  # delta1 is "higher is better"
+    # Per-metric best epochs (round 5: 4-best checkpoints).
+    best_epoch = {'score': -1, 'rmse': -1, 'absrel': -1, 'delta1': -1}
 
     # Build optional oracle-distillation teacher for foa_0415 family (exp215).
     teacher = None
@@ -860,6 +1358,9 @@ def train(cfg):
             elif foa:
                 s = _train_step_foa(model, batch, criterion, optimizer,
                                     cfg, device, use_hist, foa_frozen)
+            elif echorange:
+                s = _train_step_echorange(model, batch, criterion, optimizer,
+                                          cfg, device, epoch=epoch)
             elif echodiff:
                 s = _train_step_echodiffusion(model, batch, criterion, optimizer,
                                               cfg, device)
@@ -894,7 +1395,8 @@ def train(cfg):
             vm, vis_p, vis_g = _val_metrics(
                 model, val_loader, criterion, cfg, device, foa, echodiff,
                 use_hist, foa_frozen, js=js, foa0415=foa0415, js_rgb=js_rgb,
-                foa_oracle=foa_oracle, n2=n2, n3_0425=n3_0425)
+                foa_oracle=foa_oracle, n2=n2, n3_0425=n3_0425,
+                echorange=echorange)
             print(f"  Val L:{vm['val_loss']:.4f} ABS:{vm['abs_rel']:.4f} "
                   f"RMSE:{vm['rmse']:.4f} d1:{vm['delta1']:.4f}")
 
@@ -906,18 +1408,69 @@ def train(cfg):
                 save_batch_visualization(vis_p, vis_g, vis_path, epoch,
                                          num_samples=min(4, vis_p.shape[0]))
 
+            # ── Round 5: per-metric 4-best checkpoint save ─────────────
+            # `best_model.pth` (legacy filename) is kept as the same payload
+            # that wins the composite score, so existing test scripts that
+            # search for `best_model.pth` continue to work without changes.
             score = 0.7 * vm['rmse'] + 0.3 * vm['abs_rel']
+            ckpt_payload = {
+                'epoch': epoch,
+                'state_dict': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+            }
+
             if score < best_score:
                 best_score = score
+                best_rmse_at_score = vm['rmse']
+                best_absrel_at_score = vm['abs_rel']
+                best_epoch['score'] = epoch
+                payload = {**ckpt_payload,
+                           'best_score': best_score,
+                           'best_rmse_at_score': best_rmse_at_score,
+                           'best_absrel_at_score': best_absrel_at_score}
+                torch.save(payload, os.path.join(ckpt_dir, 'best_score.pth'))
+                # Legacy alias — same payload, same path.
+                torch.save(payload, os.path.join(ckpt_dir, 'best_model.pth'))
+                # Track the running best_rmse / best_abs_rel scalars under
+                # the round-5 score winner for the final print line.
                 best_rmse, best_abs_rel = vm['rmse'], vm['abs_rel']
-                torch.save({'epoch': epoch, 'state_dict': model.state_dict(),
-                            'optimizer': optimizer.state_dict(),
-                            'best_rmse': best_rmse, 'best_abs_rel': best_abs_rel,
-                            'best_score': best_score},
-                           os.path.join(ckpt_dir, 'best_model.pth'))
-                print(f"  >> Best (score:{best_score:.4f} RMSE:{best_rmse:.4f} ABS:{best_abs_rel:.4f})")
-                log.update({'best/score': best_score, 'best/rmse': best_rmse,
-                            'best/abs_rel': best_abs_rel, 'best/epoch': epoch})
+                print(f"  >> Best score:{best_score:.4f} "
+                      f"RMSE:{best_rmse:.4f} ABS:{best_abs_rel:.4f}")
+                log.update({'best/score': best_score,
+                            'best/rmse_at_score': best_rmse,
+                            'best/absrel_at_score': best_abs_rel,
+                            'best/score_epoch': epoch})
+
+            if vm['rmse'] < best_rmse:
+                # Pure-RMSE winner can be different from the composite best.
+                best_rmse = vm['rmse']
+                best_epoch['rmse'] = epoch
+                torch.save({**ckpt_payload, 'best_rmse': best_rmse,
+                            'metric': 'rmse'},
+                           os.path.join(ckpt_dir, 'best_rmse.pth'))
+                print(f"  >> Best RMSE:{best_rmse:.4f}")
+                log.update({'best/rmse': best_rmse,
+                            'best/rmse_epoch': epoch})
+
+            if vm['abs_rel'] < best_abs_rel:
+                best_abs_rel = vm['abs_rel']
+                best_epoch['absrel'] = epoch
+                torch.save({**ckpt_payload, 'best_absrel': best_abs_rel,
+                            'metric': 'absrel'},
+                           os.path.join(ckpt_dir, 'best_absrel.pth'))
+                print(f"  >> Best ABS_REL:{best_abs_rel:.4f}")
+                log.update({'best/absrel': best_abs_rel,
+                            'best/absrel_epoch': epoch})
+
+            if vm['delta1'] > best_delta1:
+                best_delta1 = vm['delta1']
+                best_epoch['delta1'] = epoch
+                torch.save({**ckpt_payload, 'best_delta1': best_delta1,
+                            'metric': 'delta1'},
+                           os.path.join(ckpt_dir, 'best_delta1.pth'))
+                print(f"  >> Best Delta1:{best_delta1:.4f}")
+                log.update({'best/delta1': best_delta1,
+                            'best/delta1_epoch': epoch})
 
         # wandb.log(log)
 
@@ -926,7 +1479,12 @@ def train(cfg):
                         'optimizer': optimizer.state_dict()},
                        os.path.join(ckpt_dir, f'checkpoint_{epoch}.pth'))
 
-    print(f'\nDone. Best score:{best_score:.4f} RMSE:{best_rmse:.4f} ABS:{best_abs_rel:.4f}')
+    print(
+        f'\nDone. '
+        f'Best score:{best_score:.4f}@ep{best_epoch["score"]}  '
+        f'RMSE:{best_rmse:.4f}@ep{best_epoch["rmse"]}  '
+        f'ABS:{best_abs_rel:.4f}@ep{best_epoch["absrel"]}  '
+        f'D1:{best_delta1:.4f}@ep{best_epoch["delta1"]}')
     # wandb.finish()
 
 
@@ -936,6 +1494,15 @@ if __name__ == '__main__':
     p.add_argument('--batch-size', type=int, default=None)
     p.add_argument('--epochs', type=int, default=None)
     p.add_argument('--lr', type=float, default=None)
+    p.add_argument('--lr-schedule', type=str, default=None,
+                   choices=['cosine'],
+                   help='Round-4: per-step LR schedule. cosine = '
+                        'linear warmup → cosine decay. Default off '
+                        '(constant LR — preserves prior round behaviour).')
+    p.add_argument('--lr-warmup-epochs', type=int, default=None,
+                   help='Round-4: warmup epochs for cosine schedule. '
+                        'Default 1 when --lr-schedule=cosine. Pass 0 to '
+                        'disable warmup but keep cosine decay.')
     p.add_argument('--optimizer', type=str, default=None, choices=['AdamW', 'Adam', 'SGD'])
     p.add_argument('--num-workers', type=int, default=None)
     p.add_argument('--experiment-name', type=str, default='default')
@@ -988,6 +1555,148 @@ if __name__ == '__main__':
                    help='n3_0425: weight on the cosine direction loss.')
     p.add_argument('--ngf', type=int, default=None,
                    help='n3_0425/n4_0425: base UNet width (8*ngf bottleneck).')
+    # ── echorange (bin-based depth head) ──
+    p.add_argument('--depth-head-type', type=str, default=None,
+                   choices=['scalar', 'range', 'hazard'],
+                   help='echorange: scalar (=baseline), range (soft-bin NLL), '
+                        'or hazard (first-hit rendering).')
+    p.add_argument('--range-num-bins', type=int, default=None)
+    p.add_argument('--range-bin-spacing', type=str, default=None,
+                   choices=['log', 'linear'])
+    p.add_argument('--range-min-depth', type=float, default=None)
+    p.add_argument('--range-max-depth', type=float, default=None)
+    p.add_argument('--range-soft-label-sigma', type=float, default=None,
+                   help='sigma of the log-Gaussian soft label (default 0.08).')
+    p.add_argument('--range-output-mode', type=str, default=None,
+                   choices=['expectation', 'median', 'map', 'quantile',
+                            'temperature_expectation'],
+                   help='RangeDepthHead.output_mode. Round-5 patch added '
+                        'map/quantile/temperature_expectation; defaults to '
+                        'expectation. Hard quantile/median cut gradient — '
+                        'use them at eval, prefer expectation at train.')
+    p.add_argument('--range-output-quantile', type=float, default=None,
+                   help='q ∈ (0,1) used when range_output_mode=quantile. '
+                        'Default 0.5 (median).')
+    p.add_argument('--range-output-temperature', type=float, default=None,
+                   help='Softmax T > 0 used by '
+                        'range_output_mode=temperature_expectation. T=1 is '
+                        'the regular expectation; T<1 sharpens; T>1 smears.')
+    p.add_argument('--lambda-range-nll', type=float, default=None)
+    p.add_argument('--lambda-berhu', type=float, default=None)
+    p.add_argument('--lambda-silog', type=float, default=None)
+    p.add_argument('--lambda-entropy-smooth', type=float, default=None)
+    # ── Round-5 differentiable soft-quantile auxiliary -----------------
+    p.add_argument('--lambda-soft-quantile', type=float, default=None,
+                   help='Round-5: weight on soft-quantile (BerHu+SILog) '
+                        'auxiliary loss. 0 disables (default).')
+    p.add_argument('--soft-quantile-q', type=float, default=None,
+                   help='Round-5: target quantile for soft-quantile aux '
+                        '(default 0.5).')
+    p.add_argument('--soft-quantile-tau', type=float, default=None,
+                   help='Round-5: softness τ > 0 for soft-quantile aux '
+                        '(default 0.05). Smaller = closer to hard quantile.')
+    # ── Round-5 SH spherical auxiliary ---------------------------------
+    p.add_argument('--lambda-spherical-sh', type=float, default=None,
+                   help='Round-5: weight on low-order SH coefficient '
+                        'matching loss. 0 disables (default).')
+    p.add_argument('--spherical-sh-order', type=int, default=None,
+                   choices=[0, 1, 2, 3, 4],
+                   help='Round-5: SH max order L. Default 2.')
+    p.add_argument('--spherical-sh-log-depth',
+                   dest='spherical_sh_log_depth',
+                   action='store_true', default=None,
+                   help='Round-5: project SH on log(depth) instead of '
+                        'linear depth (default true). Compresses dynamic '
+                        'range for layout matching.')
+    p.add_argument('--no-spherical-sh-log-depth',
+                   dest='spherical_sh_log_depth', action='store_false')
+    # ── Round-5 cylindrical bin axis -----------------------------------
+    p.add_argument('--range-bin-axis', type=str, default=None,
+                   choices=['radial', 'horizontal', 'z'],
+                   help='Round-5: bin axis interpretation. radial (default) '
+                        '= GT radial depth. horizontal = ρ_xy = D·cos(lat). '
+                        'z = |z| = D·|sin(lat)|. Pred is projected back to '
+                        'radial for BerHu/SILog/SH so eval stays radial.')
+    p.add_argument('--cyl-min-axis-factor', type=float, default=None,
+                   help='Round-5: min axis_factor (cos lat or |sin lat|) '
+                        'before clamping. Pixels with smaller factors are '
+                        'masked from all losses. Default 0.15 (~|lat|<81°).')
+    # ── Round-5 eval-time representative override (consumed by test.py) -
+    p.add_argument('--range-eval-mode', type=str, default=None,
+                   choices=['default', 'expectation', 'map',
+                            'q25', 'q35', 'q45', 'q50', 'q55', 'q65', 'q75',
+                            'temp05', 'temp075', 'temp15'],
+                   help='Eval-only: re-decode pred_depth from range_logits '
+                        'using the chosen representative. default leaves '
+                        "the head's training-time mode untouched.")
+    p.add_argument('--checkpoint-tag', type=str, default=None,
+                   choices=['score', 'absrel', 'rmse', 'delta1'],
+                   help='Eval-only: pick best_<tag>.pth automatically. '
+                        'Default score (= legacy best_model.pth).')
+    # Hazard head only ----------------------------------------------------
+    p.add_argument('--hazard-bias-init', type=float, default=None,
+                   help='Initial bias of the hazard head final 1×1 conv. '
+                        'sigmoid(bias) is the starting alpha. Default −4.6 '
+                        '(α≈0.01).')
+    p.add_argument('--hazard-warmup-epochs', type=int, default=None,
+                   help='Epochs (inclusive) using the warmup hit/free weights. '
+                        'After this, the post-warmup weights take over.')
+    p.add_argument('--lambda-hit-warmup', type=float, default=None,
+                   help='λ_hit during warmup (default 0.3).')
+    p.add_argument('--lambda-free-warmup', type=float, default=None,
+                   help='λ_free during warmup (default 0.05).')
+    p.add_argument('--lambda-hit', type=float, default=None,
+                   help='λ_hit after warmup (default 0.5).')
+    p.add_argument('--lambda-free', type=float, default=None,
+                   help='λ_free after warmup (default 0.1).')
+    p.add_argument('--hazard-log-delta', type=float, default=None,
+                   help='Half-width of the hit window in log-depth space. '
+                        'Default = 0.5 × log(bin_ratio) → adjacent hit '
+                        'windows tile the bin grid without overlap.')
+    # Round-4 hazard rescue ----------------------------------------------
+    p.add_argument('--hazard-aux-mode', type=str, default=None,
+                   choices=['raw_hit', 'event_nll', 'survival', 'soft_hit'],
+                   help='Round-4 dispatch for the primary hazard auxiliary '
+                        'loss. raw_hit = round-3 BCE(α,1). event_nll = NLL '
+                        'on rendered first-hit weight. survival = BCE on '
+                        'cumulative S_j = P(D > r_j). soft_hit = BCE(α, '
+                        'soft_target) on hit bins.')
+    p.add_argument('--hazard-far-thresh', type=float, default=None,
+                   help='Metres. GT depth ≥ this is treated as censored '
+                        '(excluded from event/hit/soft_hit; in survival '
+                        'mode used only as "we know D > r_j for r_j < '
+                        'far_thresh"). Default 9.8.')
+    p.add_argument('--hazard-event-sigma-bins', type=float, default=None,
+                   help='σ of the event_nll soft target, in units of bin-'
+                        'log-spacing (default 1.0).')
+    p.add_argument('--hazard-survival-tau-bins', type=float, default=None,
+                   help='τ of the survival GT sigmoid, in units of bin-log-'
+                        'spacing (default 1.0).')
+    p.add_argument('--hazard-soft-hit-target', type=float, default=None,
+                   help='soft-hit α target (default 0.75 → logit ≈ 1.10).')
+    p.add_argument('--disable-hit-loss', dest='disable_hit_loss',
+                   action='store_true', default=None,
+                   help='Hazard ablation: drop L_hit (free-only).')
+    p.add_argument('--disable-free-loss', dest='disable_free_loss',
+                   action='store_true', default=None,
+                   help='Hazard ablation: drop L_free (hit-only).')
+    p.add_argument('--hazard-depth-only', dest='hazard_depth_only',
+                   action='store_true', default=None,
+                   help='Hazard ablation: train the renderer with BerHu/'
+                        'SILog only, no per-bin hit/free supervision.')
+    # ── ERP-aware loss extras (echorange + ERP depth) ──
+    p.add_argument('--erp-cos-lat-weight', dest='erp_cos_lat_weight',
+                   action='store_true', default=None,
+                   help='Weight per-pixel range NLL by cos(latitude) so '
+                        'polar pixels (oversampled in ERP) do not dominate.')
+    p.add_argument('--no-erp-cos-lat-weight', dest='erp_cos_lat_weight',
+                   action='store_false')
+    p.add_argument('--erp-far-mask', dest='erp_far_mask',
+                   action='store_true', default=None,
+                   help='Exclude pixels with GT >= range_max_depth from '
+                        'the range NLL (avoids last-bin saturation spike).')
+    p.add_argument('--no-erp-far-mask', dest='erp_far_mask',
+                   action='store_false')
     p.add_argument('--n3-checkpoint', type=str, default=None,
                    help='n9_0425: path to a pre-trained n3_0425 best_model.pth.')
     p.add_argument('--freeze-n3', dest='freeze_n3',
@@ -1032,6 +1741,9 @@ if __name__ == '__main__':
     if args.checkpoints is not None: cfg.mode.checkpoints = args.checkpoints
     if args.batch_size is not None:  cfg.mode.batch_size = args.batch_size
     if args.lr is not None:          cfg.mode.learning_rate = args.lr
+    if args.lr_schedule is not None: cfg.mode.lr_schedule = args.lr_schedule
+    if args.lr_warmup_epochs is not None:
+        cfg.mode.lr_warmup_epochs = args.lr_warmup_epochs
     if args.optimizer is not None:   cfg.mode.optimizer = args.optimizer
     if args.epochs is not None:      cfg.mode.epochs = args.epochs
     if args.num_workers is not None: cfg.mode.num_threads = args.num_workers
@@ -1065,6 +1777,30 @@ if __name__ == '__main__':
         cfg.model.K = args.rep_K
     if args.lambda_dir is not None: cfg.model.lambda_dir = args.lambda_dir
     if args.ngf is not None:        cfg.model.ngf = args.ngf
+    # echorange overrides (covers scalar / range / hazard heads)
+    for _k in ('depth_head_type', 'range_num_bins', 'range_bin_spacing',
+               'range_min_depth', 'range_max_depth', 'range_soft_label_sigma',
+               'range_output_mode', 'lambda_range_nll', 'lambda_berhu',
+               'lambda_silog', 'lambda_entropy_smooth',
+               'erp_cos_lat_weight', 'erp_far_mask',
+               'hazard_bias_init', 'hazard_warmup_epochs',
+               'lambda_hit_warmup', 'lambda_free_warmup',
+               'lambda_hit', 'lambda_free', 'hazard_log_delta',
+               'disable_hit_loss', 'disable_free_loss', 'hazard_depth_only',
+               # Round-4 ----------------------------------------------
+               'hazard_aux_mode', 'hazard_far_thresh',
+               'hazard_event_sigma_bins', 'hazard_survival_tau_bins',
+               'hazard_soft_hit_target',
+               # Round-5 ----------------------------------------------
+               'range_output_quantile', 'range_output_temperature',
+               'lambda_soft_quantile', 'soft_quantile_q', 'soft_quantile_tau',
+               'lambda_spherical_sh', 'spherical_sh_order',
+               'spherical_sh_log_depth',
+               'range_bin_axis', 'cyl_min_axis_factor',
+               'range_eval_mode', 'checkpoint_tag'):
+        _v = getattr(args, _k, None)
+        if _v is not None:
+            setattr(cfg.model, _k, _v)
     if args.n3_checkpoint is not None:
         cfg.model.n3_checkpoint = args.n3_checkpoint
     if args.freeze_n3 is not None:

@@ -1,0 +1,134 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+============================================================
+Model: echorange  Eval: test
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[test] 3192 samples (fast cache: samples_test_erp_e2314b68a4f5.json) [waveform=ON]
+Eval [test]: 3192 samples
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/210 [00:00<?, ?it/s]Loading weights: 100%|██████████| 210/210 [00:00<00:00, 5282.88it/s]
+[1mWav2Vec2Model LOAD REPORT[0m from: facebook/wav2vec2-base-960h
+Key               | Status     | 
+------------------+------------+-
+lm_head.bias      | UNEXPECTED | 
+lm_head.weight    | UNEXPECTED | 
+masked_spec_embed | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+Loading: checkpoints/echorange_soundspaces_BS32_Lr0.0001_AdamW_exp984_R4S_sh_L0_l010_logd_bs32_r4/best_absrel.pth
+Loaded epoch 16
+  10/798 (40 samples)
+  20/798 (80 samples)
+  30/798 (120 samples)
+  40/798 (160 samples)
+  50/798 (200 samples)
+  60/798 (240 samples)
+  70/798 (280 samples)
+  80/798 (320 samples)
+  90/798 (360 samples)
+  100/798 (400 samples)
+  110/798 (440 samples)
+  120/798 (480 samples)
+  130/798 (520 samples)
+  140/798 (560 samples)
+  150/798 (600 samples)
+  160/798 (640 samples)
+  170/798 (680 samples)
+  180/798 (720 samples)
+  190/798 (760 samples)
+  200/798 (800 samples)
+  210/798 (840 samples)
+  220/798 (880 samples)
+  230/798 (920 samples)
+  240/798 (960 samples)
+  250/798 (1000 samples)
+  260/798 (1040 samples)
+  270/798 (1080 samples)
+  280/798 (1120 samples)
+  290/798 (1160 samples)
+  300/798 (1200 samples)
+  310/798 (1240 samples)
+  320/798 (1280 samples)
+  330/798 (1320 samples)
+  340/798 (1360 samples)
+  350/798 (1400 samples)
+  360/798 (1440 samples)
+  370/798 (1480 samples)
+  380/798 (1520 samples)
+  390/798 (1560 samples)
+  400/798 (1600 samples)
+  410/798 (1640 samples)
+  420/798 (1680 samples)
+  430/798 (1720 samples)
+  440/798 (1760 samples)
+  450/798 (1800 samples)
+  460/798 (1840 samples)
+  470/798 (1880 samples)
+  480/798 (1920 samples)
+  490/798 (1960 samples)
+  500/798 (2000 samples)
+  510/798 (2040 samples)
+  520/798 (2080 samples)
+  530/798 (2120 samples)
+  540/798 (2160 samples)
+  550/798 (2200 samples)
+  560/798 (2240 samples)
+  570/798 (2280 samples)
+  580/798 (2320 samples)
+  590/798 (2360 samples)
+  600/798 (2400 samples)
+  610/798 (2440 samples)
+  620/798 (2480 samples)
+  630/798 (2520 samples)
+  640/798 (2560 samples)
+  650/798 (2600 samples)
+  660/798 (2640 samples)
+  670/798 (2680 samples)
+  680/798 (2720 samples)
+  690/798 (2760 samples)
+  700/798 (2800 samples)
+  710/798 (2840 samples)
+  720/798 (2880 samples)
+  730/798 (2920 samples)
+  740/798 (2960 samples)
+  750/798 (3000 samples)
+  760/798 (3040 samples)
+  770/798 (3080 samples)
+  780/798 (3120 samples)
+  790/798 (3160 samples)
+
+============================================================
+ ABS_REL: 0.4928
+    RMSE: 1.2558
+  Delta1: 0.5065
+  Delta2: 0.7092
+  Delta3: 0.8231
+   Log10: 0.1605
+     MAE: 0.8058
+------------------------------------------------------------
+  (cos-lat sphere-weighted)
+ ABS_REL_sphere: 0.6072
+    RMSE_sphere: 1.3984
+  Delta1_sphere: 0.4337
+  Delta2_sphere: 0.6550
+  Delta3_sphere: 0.7857
+   Log10_sphere: 0.1865
+     MAE_sphere: 0.9467
+============================================================
+Saved stats: /root/storage/implementation/shared_audio/baseline/eval/soundspaces/test/stats_exp984_R4S_sh_L0_l010_logd_bs32_r4.pt
+Saved per-sample: /root/storage/implementation/shared_audio/baseline/eval/soundspaces/test/per_sample_exp984_R4S_sh_L0_l010_logd_bs32_r4.npz
+Generating visualizations (0 per scene)...
+  8WUmhLawc2A: 0 images -> merged/ gt_depth/ pred_depth/
+  EDJbREhghzL: 0 images -> merged/ gt_depth/ pred_depth/
+  HxpKQynjfin: 0 images -> merged/ gt_depth/ pred_depth/
+  Z6MFQCViBuw: 0 images -> merged/ gt_depth/ pred_depth/
+  gTV8FGcVJC9: 0 images -> merged/ gt_depth/ pred_depth/
+  pLe4wQe7qrG: 0 images -> merged/ gt_depth/ pred_depth/
+  q9vSo1VnCiC: 0 images -> merged/ gt_depth/ pred_depth/
+  sT4fr6TAbpF: 0 images -> merged/ gt_depth/ pred_depth/
+  uNb9QFRL6hY: 0 images -> merged/ gt_depth/ pred_depth/
+Saved 0 samples (0 files) to /root/storage/implementation/shared_audio/baseline/results/echorange_soundspaces_BS32_Lr0.0001_AdamW_exp984_R4S_sh_L0_l010_logd_bs32_r4/test/

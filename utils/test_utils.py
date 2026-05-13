@@ -1,15 +1,104 @@
 """Testing/evaluation utilities."""
 
+import math
+
 import numpy as np
 import torch
+import torch.nn.functional as F
 
-from .metrics import compute_errors, compute_foa_errors
+from .metrics import compute_errors, compute_errors_sphere, compute_foa_errors
 from .train_utils import (
     is_foa_model, is_foa_variant_model, is_echodiffusion_model,
     is_foa_v2_js_model, is_foa_0415_model, is_foa_v2_js_rgb_model,
     is_foa_oracle_model, is_n2_model, is_emap_temporal_model,
-    is_n3_0425_model,
+    is_n3_0425_model, is_echorange_model,
 )
+
+
+# ---------------------------------------------------------------------------
+# Round-5 eval-time helpers
+# ---------------------------------------------------------------------------
+
+# Mapping for --range-eval-mode → (point_estimate_mode, q, temperature).
+# The mode names q25/q35/.../q75 and temp05/temp075/temp15 keep CLI args
+# valid Python identifiers and also match the cell-script vocabulary.
+_RANGE_EVAL_PRESETS = {
+    'expectation':  ('expectation',             0.5, 1.0),
+    'map':          ('map',                     0.5, 1.0),
+    'q25':          ('quantile',                0.25, 1.0),
+    'q35':          ('quantile',                0.35, 1.0),
+    'q45':          ('quantile',                0.45, 1.0),
+    'q50':          ('quantile',                0.50, 1.0),
+    'q55':          ('quantile',                0.55, 1.0),
+    'q65':          ('quantile',                0.65, 1.0),
+    'q75':          ('quantile',                0.75, 1.0),
+    'temp05':       ('temperature_expectation', 0.5, 0.5),
+    'temp075':      ('temperature_expectation', 0.5, 0.75),
+    'temp15':       ('temperature_expectation', 0.5, 1.5),
+}
+
+
+def _override_range_pred_depth(raw_out, eval_mode):
+    """Re-decode pred_depth from range_logits using the chosen representative.
+
+    Returns the new (B, 1, h, w) prediction in the head's bin-axis units
+    (caller is responsible for any cylindrical → radial projection / depth
+    norm scaling that the regular path applies).
+
+    For hazard heads (which don't expose a softmax distribution over bins
+    in the standard sense) we fall back to the raw pred_depth — eval_mode
+    overrides only apply when range_logits + range_bins are both present
+    AND the head is a softmax range head.
+    """
+    if 'range_logits' not in raw_out or 'range_bins' not in raw_out:
+        return raw_out['pred_depth']
+    if eval_mode == 'default':
+        return raw_out['pred_depth']
+    if eval_mode not in _RANGE_EVAL_PRESETS:
+        raise ValueError(
+            f"unknown range_eval_mode {eval_mode!r}; "
+            f"expected one of: default, {sorted(_RANGE_EVAL_PRESETS.keys())}")
+
+    # Local import so test_utils doesn't pull torch-heavy modules at top.
+    from models.bin_based.range_head import range_point_estimate
+
+    mode, q, T = _RANGE_EVAL_PRESETS[eval_mode]
+    pred, _ = range_point_estimate(
+        logits=raw_out['range_logits'],
+        range_bins=raw_out['range_bins'],
+        mode=mode, q=q, temperature=T,
+    )
+    # The head's normal forward upsamples pred_depth to the input ERP
+    # resolution; range_logits stays at decoder resolution. Match the
+    # output resolution so the downstream metric gets the right shape.
+    target_hw = raw_out['pred_depth'].shape[-2:]
+    if pred.shape[-2:] != target_hw:
+        pred = F.interpolate(pred, size=target_hw, mode='nearest')
+    return pred
+
+
+def _project_pred_to_radial(pred_depth, cfg, device):
+    """Bin-axis → radial projection for cylindrical configs.
+
+    pred_depth: (B, 1, H, W) in bin-axis units.
+    Returns (B, 1, H, W) in radial metres; for radial configs returns
+    pred_depth unchanged (no allocation).
+    """
+    bin_axis = str(getattr(cfg.model, 'range_bin_axis', 'radial'))
+    if bin_axis == 'radial':
+        return pred_depth
+    H = pred_depth.shape[-2]
+    cyl_min = float(getattr(cfg.model, 'cyl_min_axis_factor', 0.15))
+    lat = (math.pi / 2.0) - math.pi * (
+        torch.arange(H, device=device).float() + 0.5) / H
+    if bin_axis == 'horizontal':
+        f = torch.cos(lat).clamp(min=cyl_min)
+    elif bin_axis == 'z':
+        f = torch.sin(lat).abs().clamp(min=cyl_min)
+    else:
+        raise ValueError(f"range_bin_axis must be radial / horizontal / z; "
+                         f"got {bin_axis!r}")
+    return pred_depth / f.view(1, 1, -1, 1)
 
 
 def evaluate(model, eval_loader, eval_set, cfg, device):
@@ -31,6 +120,7 @@ def evaluate(model, eval_loader, eval_set, cfg, device):
     n3_0425 = is_n3_0425_model(cfg)
     foa = (is_foa_model(cfg) or is_foa_variant_model(cfg)) and not foa0415 and not js_rgb
     echodiff = is_echodiffusion_model(cfg)
+    echorange = is_echorange_model(cfg)
     js = is_foa_v2_js_model(cfg) and not js_rgb
     foa_errors = [] if (foa or foa0415 or js_rgb or oracle or n2) else None
     batch_size = cfg.mode.batch_size
@@ -60,11 +150,16 @@ def evaluate(model, eval_loader, eval_set, cfg, device):
                 else:
                     cos_per = torch.full_like(l1_per, float('nan'))
                 for b in range(pred_rep.shape[0]):
+                    # n3_0425 is FOA-only — sphere-weighted metrics are
+                    # not meaningful here, so pad the trailing 7 slots
+                    # with zeros to keep the (N, 14) row shape uniform
+                    # with the depth-metric branch below.
                     depth_errors.append(np.array([
                         l1_per[b].item(),       # ABS_REL slot ← L1
                         rmse_per[b].item(),     # RMSE slot ← RMSE
                         cos_per[b].item(),      # Delta1 slot ← cosine
                         0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                     ]))
                 if (batch_idx + 1) % 10 == 0:
                     total = min((batch_idx + 1) * batch_size, len(eval_set))
@@ -175,6 +270,41 @@ def evaluate(model, eval_loader, eval_set, cfg, device):
                 raw_out = model(audio)
                 depth_pred = raw_out["pred_depth"]
                 pred_foa_batch = raw_out["pred_foa"]
+            elif echorange:
+                audio, depthgt, waveform = batch
+                audio, depthgt = audio.to(device), depthgt.to(device)
+                waveform = waveform.to(device)
+                raw_out = model(audio, waveform)
+
+                head_type = getattr(cfg.model, 'depth_head_type', 'scalar')
+                eval_mode = str(
+                    getattr(cfg.model, 'range_eval_mode', 'default'))
+
+                # Round-5: optional eval-time representative override on
+                # the range head (re-decode pred_depth from range_logits).
+                # Only applies when both head_type='range' AND eval_mode is
+                # not 'default'; hazard / scalar heads use raw pred_depth.
+                if head_type == 'range' and eval_mode != 'default':
+                    depth_pred = _override_range_pred_depth(raw_out, eval_mode)
+                else:
+                    depth_pred = raw_out["pred_depth"]
+
+                # Round-5: cylindrical bin-axis → radial projection so
+                # depth_pred lives in radial metres before depth_norm
+                # scaling and metric computation.
+                if head_type in ('range', 'hazard'):
+                    depth_pred = _project_pred_to_radial(
+                        depth_pred, cfg, device)
+
+                # Range/hazard heads emit metres; the scalar head, after
+                # training against normalised GT, ends up numerically in
+                # [0,1]. The downstream metric path multiplies pred by
+                # max_depth under depth_norm=true, so for range/hazard
+                # heads we scale back to normalised [0,1] first to keep
+                # the units sane.
+                if (cfg.dataset.depth_norm
+                        and head_type in ('range', 'hazard')):
+                    depth_pred = depth_pred / float(cfg.dataset.max_depth)
             elif echodiff:
                 audio, depthgt, waveform = batch
                 audio, depthgt = audio.to(device), depthgt.to(device)
@@ -193,7 +323,13 @@ def evaluate(model, eval_loader, eval_set, cfg, device):
                     pred_map = pred_map * cfg.dataset.max_depth
                 pred_map = np.clip(pred_map, 1e-3, cfg.dataset.max_depth)
                 gt_map = np.maximum(gt_map, 0.0)
-                depth_errors.append(compute_errors(gt_map, pred_map))
+                # Round-4: append 14 columns = (7 uniform) + (7 sphere
+                # cos-lat-weighted). Downstream test.py reads md[:7] for
+                # the uniform block (preserving the grep contract) and
+                # md[7:] for the sphere block.
+                u = compute_errors(gt_map, pred_map)
+                s = compute_errors_sphere(gt_map, pred_map)
+                depth_errors.append(tuple(u) + tuple(s))
 
                 if foa_errors is not None:
                     foa_errors.append(compute_foa_errors(

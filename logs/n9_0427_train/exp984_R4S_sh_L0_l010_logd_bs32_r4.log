@@ -1,0 +1,146 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+============================================================
+Model: echorange  Dataset: soundspaces
+BS: 32  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_c7ed256fbb9b.json) [waveform=ON]
+Loaded scene split from /root/local1/changwoo/matterport3d_0303_renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_89df6a83b017.json) [waveform=ON]
+Train: 23560, Val: 2951
+Loading weights:   0%|          | 0/210 [00:00<?, ?it/s]Loading weights: 100%|██████████| 210/210 [00:00<00:00, 4518.75it/s]
+[1mWav2Vec2Model LOAD REPORT[0m from: facebook/wav2vec2-base-960h
+Key               | Status     | 
+------------------+------------+-
+lm_head.bias      | UNEXPECTED | 
+lm_head.weight    | UNEXPECTED | 
+masked_spec_embed | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+Model: echorange (132.6M params)
+Traceback (most recent call last):
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 1826, in <module>
+    train(cfg)
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 1362, in train
+    s = _train_step_echorange(model, batch, criterion, optimizer,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/storage/implementation/shared_audio/baseline/train.py", line 179, in _train_step_echorange
+    out = model(audio, waveform)
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/parallel/data_parallel.py", line 192, in forward
+    return self.module(*inputs[0], **module_kwargs[0])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/torch/nn/modules/module.py", line 17  [train] epoch 6 step 600/737 (243s)
+Epoch [6/20] L:2.6661 D:0.3056 298s
+  [val] starting (93 batches)
+  [val] 50/93 (10s)
+  [val] done (93 batches, 18s)
+  Val L:0.2493 ABS:0.5316 RMSE:1.3875 d1:0.5109
+  >> Best RMSE:1.3875
+  [train] epoch 7 step 200/737 (81s)
+  [train] epoch 7 step 400/737 (162s)
+  [train] epoch 7 step 600/737 (243s)
+Epoch [7/20] L:2.6377 D:0.2950 298s
+  [train] epoch 8 step 200/737 (81s)
+  [train] epoch 8 step 400/737 (162s)
+  [train] epoch 8 step 600/737 (242s)
+Epoch [8/20] L:2.6071 D:0.2824 297s
+  [val] starting (93 batches)
+  [val] 50/93 (10s)
+  [val] done (93 batches, 19s)
+  Val L:0.2361 ABS:0.4539 RMSE:1.3694 d1:0.5208
+  >> Best score:1.0947 RMSE:1.3694 ABS:0.4539
+  >> Best Delta1:0.5208
+  [train] epoch 9 step 200/737 (81s)
+  [train] epoch 9 step 400/737 (162s)
+  [train] epoch 9 step 600/737 (243s)
+Epoch [9/20] L:2.5748 D:0.2701 298s
+  [train] epoch 10 step 200/737 (81s)
+  [train] epoch 10 step 400/737 (162s)
+  [train] epoch 10 step 600/737 (243s)
+Epoch [10/20] L:2.5429 D:0.2571 298s
+  [val] starting (93 batches)
+  [val] 50/93 (10s)
+  [val] done (93 batches, 19s)
+  Val L:0.2383 ABS:0.4596 RMSE:1.3683 d1:0.5287
+  >> Best RMSE:1.3683
+  >> Best Delta1:0.5287
+  [train] epoch 11 step 200/737 (81s)
+  [train] epoch 11 step 400/737 (162s)
+  [train] epoch 11 step 600/737 (243s)
+Epoch [11/20] L:2.5043 D:0.2415 298s
+  [train] epoch 12 step 200/737 (81s)
+  [train] epoch 12 step 400/737 (162s)
+  [train] epoch 12 step 600/737 (243s)
+Epoch [12/20] L:2.4728 D:0.2293 298s
+  [val] starting (93 batches)
+  [val] 50/93 (10s)
+  [val] done (93 batches, 18s)
+  Val L:0.2427 ABS:0.4603 RMSE:1.3786 d1:0.5336
+  >> Best Delta1:0.5336
+  [train] epoch 13 step 200/737 (81s)
+  [train] epoch 13 step 400/737 (162s)
+  [train] epoch 13 step 600/737 (242s)
+Epoch [13/20] L:2.4388 D:0.2164 297s
+  [train] epoch 14 step 200/737 (81s)
+  [train] epoch 14 step 400/737 (162s)
+  [train] epoch 14 step 600/737 (242s)
+Epoch [14/20] L:2.4067 D:0.2050 298s
+  [val] starting (93 batches)
+  [val] 50/93 (10s)
+  [val] done (93 batches, 19s)
+  Val L:0.2445 ABS:0.4639 RMSE:1.3817 d1:0.5415
+  >> Best Delta1:0.5415
+  [train] epoch 15 step 200/737 (81s)
+  [train] epoch 15 step 400/737 (162s)
+  [train] epoch 15 step 600/737 (243s)
+Epoch [15/20] L:2.3765 D:0.1950 298s
+  [train] epoch 16 step 200/737 (81s)
+  [train] epoch 16 step 400/737 (162s)
+  [train] epoch 16 step 600/737 (243s)
+Epoch [16/20] L:2.3465 D:0.1857 298s
+  [val] starting (93 batches)
+  [val] 50/93 (10s)
+  [val] done (93 batches, 19s)
+  Val L:0.2600 ABS:0.4458 RMSE:1.4260 d1:0.5269
+  >> Best ABS_REL:0.4458
+  [train] epoch 17 step 200/737 (81s)
+  [train] epoch 17 step 400/737 (162s)
+  [train] epoch 17 step 600/737 (243s)
+Epoch [17/20] L:2.3200 D:0.1778 298s
+  [train] epoch 18 step 200/737 (81s)
+  [train] epoch 18 step 400/737 (162s)
+  [train] epoch 18 step 600/737 (242s)
+Epoch [18/20] L:2.2942 D:0.1707 298s
+  [val] starting (93 batches)
+  [val] 50/93 (10s)
+  [val] done (93 batches, 18s)
+  Val L:0.2503 ABS:0.4841 RMSE:1.3844 d1:0.5345
+  [train] epoch 19 step 200/737 (81s)
+  [train] epoch 19 step 400/737 (162s)
+  [train] epoch 19 step 600/737 (243s)
+Epoch [19/20] L:2.2697 D:0.1643 298s
+  [train] epoch 20 step 200/737 (81s)
+  [train] epoch 20 step 400/737 (162s)
+  [train] epoch 20 step 600/737 (242s)
+Epoch [20/20] L:2.2524 D:0.1598 298s
+  [val] starting (93 batches)
+  [val] 50/93 (10s)
+  [val] done (93 batches, 19s)
+  Val L:0.2552 ABS:0.4746 RMSE:1.3975 d1:0.5385
+
+Done. Best score:1.0947@ep8  RMSE:1.3683@ep10  ABS:0.4458@ep16  D1:0.5415@ep14
+^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 16.00 MiB. GPU 0 has a total capacity of 23.52 GiB of which 11.38 MiB is free. Process 220 has 21.46 GiB memory in use. Including non-PyTorch memory, this process has 2.03 GiB memory in use. Of the allocated memory 1.54 GiB is allocated by PyTorch, and 52.07 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

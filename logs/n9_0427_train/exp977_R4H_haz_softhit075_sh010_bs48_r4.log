@@ -1,0 +1,189 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+============================================================
+Model: echorange  Dataset: soundspaces
+BS: 48  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_c7ed256fbb9b.json) [waveform=ON]
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_89df6a83b017.json) [waveform=ON]
+Train: 23560, Val: 2951
+Loading weights:   0%|          | 0/210 [00:00<?, ?it/s]Loading weights: 100%|██████████| 210/210 [00:00<00:00, 6102.33it/s]
+[transformers] [1mWav2Vec2Model LOAD REPORT[0m from: facebook/wav2vec2-base-960h
+Key               | Status     | 
+------------------+------------+-
+lm_head.bias      | UNEXPECTED | 
+lm_head.weight    | UNEXPECTED | 
+masked_spec_embed | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+Model: echorange (132.6M params)
+  [train] epoch 1 step 200/491 (180s)
+  [train] epoch 1 step 400/491 (360s)
+Epoch [1/20] L:0.3110 D:0.4593 442s
+  [train] epoch 2 step 200/491 (179s)
+  [train] epoch 2 step 400/491 (359s)
+Epoch [2/20] L:0.2678 D:0.3621 440s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.2965 p50=0.0549 p90=0.8609 p95=0.9134 p99=0.9697
+[haz] frac_alpha: >.5=0.319 >.9=0.063 >.95=0.020 >.99=0.003
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.000  ent: p10=0.661 p50=0.695 p90=0.743
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.0, 0.1, 0.3, 0.2, 2.4, 9.1, 57.1, 18.3, 10.2, 2.4, 0.0, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=1.119 RMSE=0.915  [1,3) AR=0.203 RMSE=0.507  [3,6) AR=0.367 RMSE=1.720  [6,9.8) AR=0.593 RMSE=4.275  [9.8,10.001) AR=0.764 RMSE=7.651
+  [val] 50/62 (29s)
+  [val] done (62 batches, 36s)
+  Val L:0.2620 ABS:0.4321 RMSE:1.5057 d1:0.4588
+  >> Best score:1.1837 RMSE:1.5057 ABS:0.4321
+  >> Best Delta1:0.4588
+  [train] epoch 3 step 200/491 (178s)
+  [train] epoch 3 step 400/491 (356s)
+Epoch [3/20] L:0.2715 D:0.3371 437s
+  [train] epoch 4 step 200/491 (179s)
+  [train] epoch 4 step 400/491 (357s)
+Epoch [4/20] L:0.2619 D:0.3238 438s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.3253 p50=0.0554 p90=0.9390 p95=0.9698 p99=0.9932
+[haz] frac_alpha: >.5=0.343 >.9=0.146 >.95=0.084 >.99=0.016
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.000  ent: p10=0.477 p50=0.637 p90=0.751
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.6, 4.0, 16.2, 44.0, 18.5, 10.7, 4.6, 0.4, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=0.853 RMSE=0.752  [1,3) AR=0.196 RMSE=0.510  [3,6) AR=0.358 RMSE=1.706  [6,9.8) AR=0.569 RMSE=4.134  [9.8,10.001) AR=0.762 RMSE=7.642
+  [val] 50/62 (29s)
+  [val] done (62 batches, 36s)
+  Val L:0.2482 ABS:0.3829 RMSE:1.4759 d1:0.4765
+  >> Best score:1.1480 RMSE:1.4759 ABS:0.3829
+  >> Best Delta1:0.4765
+  [train] epoch 5 step 200/491 (179s)
+  [train] epoch 5 step 400/491 (356s)
+Epoch [5/20] L:0.2556 D:0.3147 437s
+  [train] epoch 6 step 200/491 (178s)
+  [train] epoch 6 step 400/491 (355s)
+Epoch [6/20] L:0.2494 D:0.3054 435s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.2962 p50=0.0369 p90=0.8647 p95=0.9215 p99=0.9687
+[haz] frac_alpha: >.5=0.328 >.9=0.070 >.95=0.024 >.99=0.002
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.000  ent: p10=0.403 p50=0.633 p90=0.740
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.1, 0.6, 0.4, 0.6, 4.2, 9.7, 38.0, 25.7, 11.0, 7.8, 1.9, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=1.076 RMSE=0.987  [1,3) AR=0.205 RMSE=0.547  [3,6) AR=0.295 RMSE=1.430  [6,9.8) AR=0.483 RMSE=3.607  [9.8,10.001) AR=0.712 RMSE=7.178
+  [val] 50/62 (29s)
+  [val] done (62 batches, 35s)
+  Val L:0.2382 ABS:0.4255 RMSE:1.4023 d1:0.4972
+  >> Best score:1.1093 RMSE:1.4023 ABS:0.4255
+  >> Best Delta1:0.4972
+  [train] epoch 7 step 200/491 (178s)
+  [train] epoch 7 step 400/491 (355s)
+Epoch [7/20] L:0.2441 D:0.2972 435s
+  [train] epoch 8 step 200/491 (177s)
+  [train] epoch 8 step 400/491 (353s)
+Epoch [8/20] L:0.2376 D:0.2871 434s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.2945 p50=0.0373 p90=0.7956 p95=0.8618 p99=0.9448
+[haz] frac_alpha: >.5=0.354 >.9=0.029 >.95=0.008 >.99=0.001
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.000  ent: p10=0.383 p50=0.588 p90=0.712
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.1, 0.4, 0.4, 0.4, 2.6, 18.6, 39.5, 20.2, 12.7, 4.5, 0.5, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=0.998 RMSE=0.844  [1,3) AR=0.190 RMSE=0.495  [3,6) AR=0.345 RMSE=1.648  [6,9.8) AR=0.557 RMSE=4.071  [9.8,10.001) AR=0.755 RMSE=7.579
+  [val] 50/62 (27s)
+  [val] done (62 batches, 33s)
+  Val L:0.2457 ABS:0.3951 RMSE:1.4622 d1:0.4912
+  >> Best ABS_REL:0.3951
+  [train] epoch 9 step 200/491 (177s)
+  [train] epoch 9 step 400/491 (353s)
+Epoch [9/20] L:0.2314 D:0.2774 433s
+  [train] epoch 10 step 200/491 (176s)
+  [train] epoch 10 step 400/491 (353s)
+Epoch [10/20] L:0.2224 D:0.2631 433s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.3087 p50=0.0452 p90=0.8250 p95=0.8920 p99=0.9571
+[haz] frac_alpha: >.5=0.369 >.9=0.045 >.95=0.013 >.99=0.001
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.000  ent: p10=0.385 p50=0.563 p90=0.711
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.1, 0.3, 0.4, 1.1, 12.5, 16.5, 33.9, 14.6, 13.4, 6.5, 0.9, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=0.890 RMSE=0.861  [1,3) AR=0.229 RMSE=0.580  [3,6) AR=0.333 RMSE=1.591  [6,9.8) AR=0.528 RMSE=3.891  [9.8,10.001) AR=0.740 RMSE=7.436
+  [val] 50/62 (29s)
+  [val] done (62 batches, 35s)
+  Val L:0.2553 ABS:0.3813 RMSE:1.4545 d1:0.4698
+  >> Best ABS_REL:0.3813
+  [train] epoch 11 step 200/491 (176s)
+  [train] epoch 11 step 400/491 (352s)
+Epoch [11/20] L:0.2142 D:0.2501 432s
+  [train] epoch 12 step 200/491 (177s)
+  [train] epoch 12 step 400/491 (353s)
+Epoch [12/20] L:0.2043 D:0.2342 433s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.2760 p50=0.0367 p90=0.7450 p95=0.8014 p99=0.9097
+[haz] frac_alpha: >.5=0.338 >.9=0.012 >.95=0.003 >.99=0.000
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.000  ent: p10=0.406 p50=0.573 p90=0.692
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.1, 0.3, 0.6, 1.1, 7.4, 17.1, 32.8, 18.3, 15.2, 5.5, 1.5, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=0.939 RMSE=0.879  [1,3) AR=0.205 RMSE=0.542  [3,6) AR=0.315 RMSE=1.514  [6,9.8) AR=0.499 RMSE=3.729  [9.8,10.001) AR=0.717 RMSE=7.213
+  [val] 50/62 (29s)
+  [val] done (62 batches, 35s)
+  Val L:0.2536 ABS:0.3954 RMSE:1.4259 d1:0.5019
+  >> Best Delta1:0.5019
+  [train] epoch 13 step 200/491 (177s)
+  [train] epoch 13 step 400/491 (353s)
+Epoch [13/20] L:0.1953 D:0.2203 432s
+  [train] epoch 14 step 200/491 (176s)
+  [train] epoch 14 step 400/491 (353s)
+Epoch [14/20] L:0.1879 D:0.2087 433s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.2882 p50=0.0372 p90=0.7932 p95=0.8394 p99=0.9253
+[haz] frac_alpha: >.5=0.338 >.9=0.018 >.95=0.005 >.99=0.000
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.000  ent: p10=0.389 p50=0.560 p90=0.688
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.0, 0.2, 0.8, 1.5, 7.6, 18.6, 33.8, 15.1, 13.9, 7.5, 0.8, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=0.832 RMSE=0.790  [1,3) AR=0.206 RMSE=0.549  [3,6) AR=0.322 RMSE=1.565  [6,9.8) AR=0.522 RMSE=3.859  [9.8,10.001) AR=0.732 RMSE=7.370
+  [val] 50/62 (28s)
+  [val] done (62 batches, 34s)
+  Val L:0.2522 ABS:0.3838 RMSE:1.4360 d1:0.5038
+  >> Best Delta1:0.5038
+  [train] epoch 15 step 200/491 (177s)
+  [train] epoch 15 step 400/491 (354s)
+Epoch [15/20] L:0.1800 D:0.1965 434s
+  [train] epoch 16 step 200/491 (177s)
+  [train] epoch 16 step 400/491 (353s)
+Epoch [16/20] L:0.1737 D:0.1873 433s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.2292 p50=0.0235 p90=0.6912 p95=0.7476 p99=0.8382
+[haz] frac_alpha: >.5=0.263 >.9=0.004 >.95=0.002 >.99=0.000
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.001  ent: p10=0.424 p50=0.557 p90=0.660
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.0, 0.2, 0.5, 0.5, 4.9, 19.2, 34.3, 17.6, 14.0, 7.2, 1.5, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=1.077 RMSE=0.991  [1,3) AR=0.211 RMSE=0.569  [3,6) AR=0.304 RMSE=1.515  [6,9.8) AR=0.510 RMSE=3.769  [9.8,10.001) AR=0.693 RMSE=6.997
+  [val] 50/62 (28s)
+  [val] done (62 batches, 34s)
+  Val L:0.2549 ABS:0.4090 RMSE:1.4253 d1:0.5267
+  >> Best Delta1:0.5267
+  [train] epoch 17 step 200/491 (176s)
+  [train] epoch 17 step 400/491 (353s)
+Epoch [17/20] L:0.1677 D:0.1783 434s
+  [train] epoch 18 step 200/491 (177s)
+  [train] epoch 18 step 400/491 (354s)
+Epoch [18/20] L:0.1625 D:0.1706 434s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.2054 p50=0.0233 p90=0.6570 p95=0.7245 p99=0.8162
+[haz] frac_alpha: >.5=0.210 >.9=0.003 >.95=0.001 >.99=0.000
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.005  ent: p10=0.436 p50=0.556 p90=0.655
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.0, 0.3, 0.5, 0.8, 9.2, 20.6, 31.2, 15.5, 13.5, 7.4, 1.1, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=0.978 RMSE=0.950  [1,3) AR=0.216 RMSE=0.579  [3,6) AR=0.313 RMSE=1.546  [6,9.8) AR=0.508 RMSE=3.774  [9.8,10.001) AR=0.685 RMSE=6.933
+  [val] 50/62 (29s)
+  [val] done (62 batches, 35s)
+  Val L:0.2639 ABS:0.3853 RMSE:1.4392 d1:0.5109
+  [train] epoch 19 step 200/491 (178s)
+  [train] epoch 19 step 400/491 (355s)
+Epoch [19/20] L:0.1579 D:0.1638 435s
+  [train] epoch 20 step 200/491 (178s)
+  [train] epoch 20 step 400/491 (356s)
+Epoch [20/20] L:0.1533 D:0.1570 437s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.1683 p50=0.0146 p90=0.6034 p95=0.7019 p99=0.8136
+[haz] frac_alpha: >.5=0.154 >.9=0.002 >.95=0.001 >.99=0.000
+[haz] bg_weight: p10=0.000 p50=0.001 p90=0.008  ent: p10=0.456 p50=0.561 p90=0.672
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.0, 0.3, 0.7, 1.5, 11.5, 20.0, 29.2, 14.2, 12.6, 8.3, 1.6, 0.1, 0.0]
+[haz] sliced: [0.1,1) AR=1.030 RMSE=1.040  [1,3) AR=0.240 RMSE=0.634  [3,6) AR=0.313 RMSE=1.562  [6,9.8) AR=0.508 RMSE=3.850  [9.8,10.001) AR=0.721 RMSE=7.315
+  [val] 50/62 (28s)
+  [val] done (62 batches, 34s)
+  Val L:0.2724 ABS:0.4300 RMSE:1.4679 d1:0.5150
+
+Done. Best score:1.1093@ep6  RMSE:1.4023@ep-1  ABS:0.3813@ep10  D1:0.5267@ep16

@@ -81,9 +81,20 @@ def test(cfg):
     md = de.mean(0)
 
     print('\n' + '=' * 60)
-    labels = ['ABS_REL', 'RMSE', 'Delta1', 'Delta2', 'Delta3', 'Log10', 'MAE']
-    for i, lbl in enumerate(labels):
+    labels_uniform = ['ABS_REL', 'RMSE', 'Delta1', 'Delta2', 'Delta3', 'Log10', 'MAE']
+    for i, lbl in enumerate(labels_uniform):
         print(f'{lbl:>8s}: {md[i]:.4f}')
+
+    # Round-4: cos-lat sphere-weighted block. de has 14 cols when the
+    # depth-metric path was taken (echorange / echodiff / foa / oracle /
+    # n2 / etc.); n3_0425 pads with zeros — the block prints as 0.0000
+    # in that case and is harmless.
+    if de.shape[1] >= 14:
+        labels_sphere = [f'{l}_sphere' for l in labels_uniform]
+        print('-' * 60)
+        print('  (cos-lat sphere-weighted)')
+        for i, lbl in enumerate(labels_sphere):
+            print(f'{lbl:>15s}: {md[7 + i]:.4f}')
 
     if foa and foa_err:
         print('-' * 30)
@@ -100,13 +111,50 @@ def test(cfg):
     # Save stats
     stats_dir = os.path.join(project_dir, 'eval', cfg.dataset.name, eval_on)
     os.makedirs(stats_dir, exist_ok=True)
-    stats = {lbl.lower(): torch.tensor(de[:, i]) for i, lbl in enumerate(labels)}
+    stats = {lbl.lower(): torch.tensor(de[:, i])
+             for i, lbl in enumerate(labels_uniform)}
+    if de.shape[1] >= 14:
+        for i, lbl in enumerate(labels_uniform):
+            stats[f'{lbl.lower()}_sphere'] = torch.tensor(de[:, 7 + i])
     if foa and foa_err:
         for k in ('foa_l1', 'foa_cosine', 'foa_dir_cosine'):
             stats[k] = torch.tensor([e[k] for e in foa_err])
     stats_path = os.path.join(stats_dir, f'stats_{cfg.mode.experiment_name}.pt')
     torch.save(stats, stats_path)
     print(f'Saved stats: {stats_path}')
+
+    # Round-4: per-sample npz for paired-bootstrap CI and offline q-sweep
+    # analysis. Saves uniform + sphere variants plus sample_id / scene_id.
+    # Sample order matches the dataloader (shuffle=False), which matches
+    # eval_set.samples.
+    try:
+        n_rows = de.shape[0]
+        scene_ids = []
+        for i, sample in enumerate(eval_set.samples[:n_rows]):
+            # sample is typically (scene, ...). Be robust to single-string.
+            scene_ids.append(str(sample[0]) if isinstance(sample, (list, tuple))
+                             else str(sample))
+        scene_ids = np.array(scene_ids, dtype=object)
+        sample_ids = np.arange(n_rows, dtype=np.int64)
+        npz_path = os.path.join(stats_dir,
+                                f'per_sample_{cfg.mode.experiment_name}.npz')
+        npz_payload = dict(
+            sample_id=sample_ids, scene_id=scene_ids,
+            abs_rel=de[:, 0], rmse=de[:, 1], delta1=de[:, 2],
+            delta2=de[:, 3], delta3=de[:, 4], log10=de[:, 5], mae=de[:, 6],
+        )
+        if de.shape[1] >= 14:
+            npz_payload.update(dict(
+                abs_rel_sphere=de[:, 7], rmse_sphere=de[:, 8],
+                delta1_sphere=de[:, 9], delta2_sphere=de[:, 10],
+                delta3_sphere=de[:, 11], log10_sphere=de[:, 12],
+                mae_sphere=de[:, 13],
+            ))
+        np.savez(npz_path, **npz_payload)
+        print(f'Saved per-sample: {npz_path}')
+    except Exception as e:
+        # Don't break the test pipeline on bookkeeping failure.
+        print(f'  [per-sample npz] WARNING: skipped — {e}')
 
     # Generate per-scene visualizations (merged + separate gt/pred)
     vis_per_scene = getattr(cfg.mode, 'vis_per_scene', 100)
@@ -265,6 +313,44 @@ if __name__ == '__main__':
     p.add_argument('--no-oracle-mode', dest='oracle_mode', action='store_false')
     p.add_argument('--oracle-gate-mode', type=str, default=None,
                    choices=['ones', 'pred'])
+    # ── echorange (must match the trained checkpoint) ──
+    p.add_argument('--depth-head-type', type=str, default=None,
+                   choices=['scalar', 'range', 'hazard'],
+                   help='echorange: must match the checkpoint head type.')
+    p.add_argument('--range-num-bins', type=int, default=None)
+    p.add_argument('--range-bin-spacing', type=str, default=None,
+                   choices=['log', 'linear'])
+    p.add_argument('--range-min-depth', type=float, default=None)
+    p.add_argument('--range-max-depth', type=float, default=None)
+    p.add_argument('--range-output-mode', type=str, default=None,
+                   choices=['expectation', 'median', 'map', 'quantile',
+                            'temperature_expectation'],
+                   help='echorange: train-time output mode (must match ckpt).')
+    p.add_argument('--range-output-quantile', type=float, default=None)
+    p.add_argument('--range-output-temperature', type=float, default=None)
+    p.add_argument('--range-bin-axis', type=str, default=None,
+                   choices=['radial', 'horizontal', 'z'],
+                   help='echorange round-5: must match the trained ckpt. '
+                        'horizontal/z modes apply a bin-axis → radial '
+                        'projection inside test_utils before scoring.')
+    p.add_argument('--cyl-min-axis-factor', type=float, default=None)
+    p.add_argument('--range-eval-mode', type=str, default=None,
+                   choices=['default', 'expectation', 'map',
+                            'q25', 'q35', 'q45', 'q50', 'q55', 'q65', 'q75',
+                            'temp05', 'temp075', 'temp15'],
+                   help='echorange round-5: eval-only — re-decode pred_depth '
+                        'from range_logits using the chosen representative. '
+                        'default leaves the head as-is.')
+    p.add_argument('--checkpoint-tag', type=str, default=None,
+                   choices=['score', 'absrel', 'rmse', 'delta1'],
+                   help='echorange round-5: pick best_<tag>.pth alongside '
+                        '--experiment-name automatically. score = legacy '
+                        'best_model.pth. Ignored if --checkpoint-path is '
+                        'given.')
+    # Hazard head bias must be provided so the conv layer is constructed
+    # with a matching bias tensor shape; the checkpoint then overwrites
+    # the value via load_state_dict, but the buffer/parameter must exist.
+    p.add_argument('--hazard-bias-init', type=float, default=None)
     args, _unknown = p.parse_known_args()
 
     cfg = load_config(config_name=args.config, mode='test',
@@ -296,6 +382,44 @@ if __name__ == '__main__':
     if args.side_fusion is not None:      cfg.model.side_fusion = bool(args.side_fusion)
     if args.oracle_mode is not None:      cfg.model.oracle_mode = bool(args.oracle_mode)
     if args.oracle_gate_mode is not None: cfg.model.oracle_gate_mode = args.oracle_gate_mode
+    # ── echorange overrides — these change model construction or inference,
+    # so they MUST match the checkpoint's training-time settings.
+    if args.depth_head_type is not None:  cfg.model.depth_head_type = args.depth_head_type
+    if args.range_num_bins is not None:   cfg.model.range_num_bins = args.range_num_bins
+    if args.range_bin_spacing is not None: cfg.model.range_bin_spacing = args.range_bin_spacing
+    if args.range_min_depth is not None:  cfg.model.range_min_depth = args.range_min_depth
+    if args.range_max_depth is not None:  cfg.model.range_max_depth = args.range_max_depth
+    if args.range_output_mode is not None: cfg.model.range_output_mode = args.range_output_mode
+    if args.range_output_quantile is not None:
+        cfg.model.range_output_quantile = args.range_output_quantile
+    if args.range_output_temperature is not None:
+        cfg.model.range_output_temperature = args.range_output_temperature
+    if args.range_bin_axis is not None:
+        cfg.model.range_bin_axis = args.range_bin_axis
+    if args.cyl_min_axis_factor is not None:
+        cfg.model.cyl_min_axis_factor = args.cyl_min_axis_factor
+    if args.range_eval_mode is not None:
+        cfg.model.range_eval_mode = args.range_eval_mode
+    if args.hazard_bias_init is not None:  cfg.model.hazard_bias_init = args.hazard_bias_init
+
+    # ── Round-5: --checkpoint-tag picks best_<tag>.pth automatically when
+    # --checkpoint-path is not given. Looks under the same checkpoint
+    # directory the trainer writes to. score=best_model.pth (legacy alias).
+    if args.checkpoint_tag is not None and not args.checkpoint_path:
+        import os
+        tag = args.checkpoint_tag
+        ckpt_filename = ('best_model.pth' if tag == 'score'
+                         else f'best_{tag}.pth')
+        ckpt_dir = os.path.join(
+            cfg.mode.checkpoints if hasattr(cfg.mode, 'checkpoints') else
+            'checkpoints', args.experiment_name)
+        candidate = os.path.join(ckpt_dir, ckpt_filename)
+        if os.path.isfile(candidate):
+            cfg.mode.checkpoint_path = candidate
+            print(f"  [checkpoint-tag={tag}] using {candidate}")
+        else:
+            print(f"  [checkpoint-tag={tag}] WARNING: {candidate} not found; "
+                  "falling back to whatever the test pipeline auto-discovers.")
 
     print('=' * 60)
     print(f'Model: {cfg.model.name}  Eval: {args.eval_on}')

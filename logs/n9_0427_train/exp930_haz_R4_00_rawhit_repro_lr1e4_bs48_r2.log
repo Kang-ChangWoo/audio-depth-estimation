@@ -1,0 +1,62 @@
+/opt/conda/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+============================================================
+Model: echorange  Dataset: soundspaces
+BS: 48  LR: 0.0001  Opt: AdamW
+============================================================
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[train] 23560 samples (fast cache: samples_train_erp_c7ed256fbb9b.json) [waveform=ON]
+Loaded scene split from /root/local1/changwoo/matterport3d_0303renew/scene_split.json
+  train: 72, val: 9, test: 9
+[val] 2951 samples (fast cache: samples_val_erp_89df6a83b017.json) [waveform=ON]
+Train: 23560, Val: 2951
+Loading weights:   0%|          | 0/210 [00:00<?, ?it/s]Loading weights: 100%|██████████| 210/210 [00:00<00:00, 6536.00it/s]
+[transformers] [1mWav2Vec2Model LOAD REPORT[0m from: facebook/wav2vec2-base-960h
+Key               | Status     | 
+------------------+------------+-
+lm_head.bias      | UNEXPECTED | 
+lm_head.weight    | UNEXPECTED | 
+masked_spec_embed | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+Model: echorange (132.6M params)
+  [train] epoch 1 step 200/491 (181s)
+  [train] epoch 1 step 400/491 (359s)
+Epoch [1/5] L:0.5058 D:0.5225 440s
+  [train] epoch 2 step 200/491 (180s)
+  [train] epoch 2 step 400/491 (358s)
+Epoch [2/5] L:0.5129 D:0.5103 439s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.4506 p50=0.1233 p90=0.9999 p95=1.0000 p99=1.0000
+[haz] frac_alpha: >.5=0.450 >.9=0.397 >.95=0.376 >.99=0.302
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.000  ent: p10=0.390 p50=0.486 p90=0.591
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.1, 0.4, 0.4, 0.8, 3.0, 13.1, 25.1, 45.8, 9.1, 2.2, 0.0, 0.0, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=0.459 RMSE=0.403  [1,3) AR=0.279 RMSE=0.688  [3,6) AR=0.577 RMSE=2.508  [6,9.8) AR=0.748 RMSE=5.293  [9.8,10.001) AR=0.865 RMSE=8.659
+  [val] 50/62 (28s)
+  [val] done (62 batches, 34s)
+  Val L:0.3731 ABS:0.4095 RMSE:1.9071 d1:0.2902
+  >> Best (score:1.4578 RMSE:1.9071 ABS:0.4095)
+  [train] epoch 3 step 200/491 (179s)
+  [train] epoch 3 step 400/491 (356s)
+Epoch [3/5] L:0.5627 D:0.5429 438s
+  [train] epoch 4 step 200/491 (179s)
+  [train] epoch 4 step 400/491 (359s)
+Epoch [4/5] L:0.5439 D:0.5265 440s
+  [val] starting (62 batches)
+[haz] alpha: mean=0.4730 p50=0.2495 p90=0.9980 p95=0.9996 p99=1.0000
+[haz] frac_alpha: >.5=0.475 >.9=0.423 >.95=0.394 >.99=0.242
+[haz] bg_weight: p10=0.000 p50=0.000 p90=0.000  ent: p10=0.356 p50=0.449 p90=0.576
+[haz] argmax_bin_hist (folded 32→16, %): [0.0, 0.0, 0.0, 0.4, 0.5, 1.5, 8.3, 25.1, 25.9, 26.1, 6.9, 4.9, 0.5, 0.0, 0.0, 0.0]
+[haz] sliced: [0.1,1) AR=0.333 RMSE=0.314  [1,3) AR=0.347 RMSE=0.800  [3,6) AR=0.571 RMSE=2.513  [6,9.8) AR=0.727 RMSE=5.182  [9.8,10.001) AR=0.858 RMSE=8.595
+  [val] 50/62 (27s)
+  [val] done (62 batches, 33s)
+  Val L:0.4128 ABS:0.4313 RMSE:1.9443 d1:0.2206
+  [train] epoch 5 step 200/491 (180s)
+  [train] epoch 5 step 400/491 (359s)
+Epoch [5/5] L:0.5284 D:0.5113 440s
+
+Done. Best score:1.4578 RMSE:1.9071 ABS:0.4095
