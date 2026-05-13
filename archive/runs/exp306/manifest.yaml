@@ -1,0 +1,10 @@
+run_id: "exp306"
+model_name: "renew_single (radial v2)"
+role: "ours"
+era: "radial"
+git_commit: "97b6668"
+ledger_status_keep: "ledger KEEP + radial-era"
+metrics_raw: "RMSE=1.2233, AbsRel=0.4742, δ1=0.5033, Log10=0.1554, MAE=0.7835, FOA_COS=0.9986, FOA_DIR=0.9965"
+notes: "ledger KEEP + radial-era | metrics=RMSE=1.2233, AbsRel=0.4742, δ1=0.5033, Log10=0.1554, MAE=0.7835, FOA_COS=0.9986, FOA_DIR=0.9965"
+extra_configs: []
+missing_paths: ["config/renew_single.yaml"]

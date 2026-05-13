@@ -1,0 +1,10 @@
+run_id: "exp410"
+model_name: "UNet bottleneck ⊕ MLP(g⊙rep_gt); drop bin 0 (bs128)"
+role: "ablation"
+era: "radial"
+git_commit: "97b6668"
+ledger_status_keep: "ledger KEEP + radial-era"
+metrics_raw: "RMSE=1.2527, AbsRel=0.4605, δ1=0.5039, δ2=0.7164, δ3=0.8332, Log10=0.1574, MAE=0.7919, FOA_COS=0.4736, FOA_DIR=0.4444"
+notes: "ledger KEEP + radial-era | metrics=RMSE=1.2527, AbsRel=0.4605, δ1=0.5039, δ2=0.7164, δ3=0.8332, Log10=0.1574, MAE=0.7919, FOA_COS=0.4736, FOA_DIR=0.4444"
+extra_configs: []
+missing_paths: ["config/n4_0425.yaml"]
