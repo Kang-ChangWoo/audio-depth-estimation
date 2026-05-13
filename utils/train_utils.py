@@ -18,7 +18,7 @@ import torch.nn as nn
 
 from models import (
     define_G, AudioDepthFOAGenerator, EchoDiffusion, EchoDiffusionAmbi, EchoDiffusionAmbiSH, EchoNet,
-    EchoDiffusionSHSide, EchoDiffusionSHSidePlus,
+    EchoDiffusionSHSidePlus,
     BatVisionUNet, PretrainedViT, PretrainedViTFOA, PretrainedResNet, AudioDepthViT,
     PretrainedViTFOAV2, PretrainedViTFOAV3, PretrainedViTFOAV4, PretrainedViTFOAV5,
     PretrainedViTFOAV6EAttn, PretrainedViTFOAV6MSSH, PretrainedViTFOAV6OracleNC3,
@@ -41,9 +41,7 @@ _PVITFOA_AUX_SH_NAMES = {
     'pretrained_vit_foa_v5',
     'pretrained_vit_foa_v6_eattn',
     'pretrained_vit_foa_v6_mssh',
-    # n2_0427 — EchoDiffusion + SH side-prior (concise/Plus); kept for
-    # echodiff_sh_side_plus.yaml.
-    'echodiff_sh_side',
+    # n2_0427 — EchoDiffusion + SH side-prior (Plus only after F1).
     'echodiff_sh_side_plus',
     # echodiffusion_ambi family — bin-gated FOA conditioning paths.
     'echodiffusion_ambi',
@@ -76,7 +74,7 @@ def is_foa_0415_model(cfg):
 
     Post-E1: the UNet-based foa_0415_v{1..5} family was moved to
     models/deprecated/. This predicate now only matches the ViT-FOA v1/v3/v4/v5
-    pretrains plus the echodiffusion_ambi / echodiff_sh_side(_plus) routes.
+    pretrains plus the echodiffusion_ambi / echodiff_sh_side_plus routes.
     Same train/test routing: forward returns ``{pred_depth, pred_sh, ...}`` and
     the training loss is ``L_depth + lambda_sh * L1(pred_sh[:, :4], gt_foa)``.
     """
@@ -259,21 +257,6 @@ def build_model(cfg, gpu_ids):
         if hasattr(cfg.model, 'gate_mask'):
             kwargs['gate_mask'] = cfg.model.gate_mask
         net = EchoDiffusionAmbi(cfg, **kwargs)
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'echodiff_sh_side':
-        net = EchoDiffusionSHSide(
-            cfg,
-            max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
-            embed_dim=getattr(cfg.model, 'embed_dim', 192),
-            K=int(getattr(cfg.model, 'K', 8)),
-            rep_hidden=int(getattr(cfg.model, 'rep_hidden', 512)),
-            side_fusion=bool(getattr(cfg.model, 'side_fusion', True)),
-            oracle_mode=bool(getattr(cfg.model, 'oracle_mode', False)),
-        )
         if len(gpu_ids) > 0:
             assert torch.cuda.is_available()
             net = net.to(gpu_ids[0])
