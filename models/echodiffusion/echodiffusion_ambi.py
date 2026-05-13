@@ -46,10 +46,47 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.n9_0424 import make_foa_basis_erp
 from .aspp_asff import UNetASPPASFF
 from .diffusion_unet import DiffusionUNet
 from .echodiffusion import Decoder, CIDE
+
+
+def make_foa_basis_erp(H: int, W: int,
+                       device=None, dtype=torch.float32) -> torch.Tensor:
+    """FOA basis on an ERP grid, channel order [W, Y, Z, X]. Shape (4, H, W).
+
+        basis[0] = c0                      (W, isotropic)
+        basis[1] = c1 · cos(el) · sin(az)  (Y)
+        basis[2] = c1 · sin(el)            (Z)
+        basis[3] = c1 · cos(el) · cos(az)  (X)
+
+    c0 = 1/√(4π),  c1 = √(3/(4π)).
+
+    Inlined from former models.n9_0424.fusion when n9_0424 was moved to
+    models/deprecated/ (Phase E1). Keep in sync if FOA conventions change.
+    """
+    ys = torch.linspace(0.5, H - 0.5, H, device=device, dtype=dtype) / H
+    xs = torch.linspace(0.5, W - 0.5, W, device=device, dtype=dtype) / W
+
+    az = (xs - 0.5) * 2.0 * torch.pi
+    el = (0.5 - ys) * torch.pi
+
+    el_grid, az_grid = torch.meshgrid(el, az, indexing='ij')
+
+    x = torch.cos(el_grid) * torch.cos(az_grid)
+    y = torch.cos(el_grid) * torch.sin(az_grid)
+    z = torch.sin(el_grid)
+
+    c0 = 0.28209479177387814    # 1 / √(4π)
+    c1 = 0.4886025119029199     # √(3 / (4π))
+
+    basis = torch.stack([
+        torch.full_like(x, c0),
+        c1 * y,
+        c1 * z,
+        c1 * x,
+    ], dim=0)
+    return basis
 
 
 def _build_gated_em(rep: torch.Tensor, g: torch.Tensor,
