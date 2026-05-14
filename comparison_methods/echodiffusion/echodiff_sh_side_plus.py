@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from data.sh_basis import sh_basis_matrix
-from models.echodiffusion.aspp_asff import UNetASPPASFF
-from models.echodiffusion.diffusion_unet import DiffusionUNet
+from .aspp_asff import UNetASPPASFF
+from .diffusion_unet import DiffusionUNet
 
 
 def _build_foa_basis_erp(H: int, W: int) -> torch.Tensor:

@@ -17,12 +17,16 @@ import torch
 import torch.nn as nn
 
 from models import (
-    define_G, AudioDepthFOAGenerator, EchoDiffusion, EchoDiffusionAmbi, EchoDiffusionAmbiSH, EchoNet,
-    EchoDiffusionSHSidePlus,
-    BatVisionUNet, PretrainedViT, PretrainedViTFOA, PretrainedResNet, AudioDepthViT,
+    define_G, AudioDepthFOAGenerator,
+    PretrainedViT, PretrainedViTFOA, PretrainedResNet, AudioDepthViT,
     EchoRangeDepth,
     DepthLoss, FOAGuidedLoss, SHHistogramAlignmentLoss, AudioDepthFOALoss,
 )
+from comparison_methods.echodiffusion import (
+    EchoDiffusion, EchoDiffusionAmbi, EchoDiffusionAmbiSH, EchoDiffusionSHSidePlus,
+)
+from comparison_methods.echonet import EchoNet
+from comparison_methods.batvision import BatVisionUNet
 from models.registry import register_builder, build_model_from_registry
 
 

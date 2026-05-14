@@ -29,7 +29,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.echodiffusion.echodiffusion import EcoDepthEncoder, Decoder
+from comparison_methods.echodiffusion.echodiffusion import EcoDepthEncoder, Decoder
 from .range_head import RangeDepthHead, HazardRangeDepthHead
 
 
