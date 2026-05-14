@@ -1,13 +1,16 @@
 """DataLoader factory."""
 
 from torch.utils.data import DataLoader
-from .dataset import SoundSpacesDataset, SoundSpacesDatasetRotated, SoundSpacesDatasetRGB
+from .dataset import SoundSpacesDataset, SoundSpacesDatasetRotated
 
 
 def _select_dataset_class(cfg):
-    """Pick dataset class based on config flags."""
-    if getattr(cfg.dataset, 'use_rgb', False):
-        return SoundSpacesDatasetRGB
+    """Pick dataset class based on config flags.
+
+    RGB input (use_rgb) is no longer a separate class — it's handled
+    inline by an if-branch in SoundSpacesDataset.__getitem__, so only
+    the FOA-rotation choice affects class selection here.
+    """
     if (getattr(cfg.dataset, 'rotate_canonical', False)
             and getattr(cfg.dataset, 'use_ambisonic', False)):
         return SoundSpacesDatasetRotated

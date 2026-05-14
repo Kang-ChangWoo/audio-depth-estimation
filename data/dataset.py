@@ -85,6 +85,11 @@ class SoundSpacesDataset(Dataset):
         self.use_distance_bins = getattr(cfg.dataset, 'use_distance_bins', False)
         if self.use_distance_bins and not self.use_ambisonic:
             raise ValueError("use_distance_bins=True requires use_ambisonic=True")
+        # ERP RGB image input (formerly the SoundSpacesDatasetRGB wrapper).
+        # Now handled inline in __getitem__ via an if-branch.
+        self.use_rgb = getattr(cfg.dataset, 'use_rgb', False)
+        if self.use_rgb and not self.use_ambisonic:
+            raise ValueError("use_rgb=True requires use_ambisonic=True")
         # Sample-rate assumption for time↔distance conversion. Matches the
         # hardcoded early/mid window boundaries elsewhere in this file
         # (2600 samples ≈ 59ms ≈ 10m round-trip at 343 m/s).
@@ -348,6 +353,21 @@ class SoundSpacesDataset(Dataset):
                         foa_target.contiguous(), energy_map.contiguous(),
                         rep_gt_t.contiguous())
 
+            if self.use_rgb:
+                # ERP RGB image -> float32 [0,1], (3, H, W), resized to images_size.
+                rgb_path = os.path.join(
+                    self.root_dir, scene, 'erp_rgb', f'erp_{sample_idx}.png')
+                img = Image.open(rgb_path).convert('RGB')
+                rgb = torch.from_numpy(
+                    np.array(img, dtype=np.float32).transpose(2, 0, 1) / 255.0)
+                if rgb.shape[1] != h or rgb.shape[2] != w:
+                    rgb = F.interpolate(
+                        rgb.unsqueeze(0), size=(h, w), mode='bilinear',
+                        align_corners=False).squeeze(0)
+                return (audio.contiguous(), gt_depth.contiguous(),
+                        foa_target.contiguous(), energy_map.contiguous(),
+                        rgb.contiguous())
+
             return (audio.contiguous(), gt_depth.contiguous(),
                     foa_target.contiguous(), energy_map.contiguous())
 
@@ -535,39 +555,3 @@ class SoundSpacesDatasetRotated(SoundSpacesDataset):
         ir = np.load(ambi_path).astype(np.float64)
         view_mod = get_view_mod_from_sample_idx(sample_idx)
         return rotate_foa_to_canonical(ir, view_mod)
-
-
-# ---------------------------------------------------------------------------
-# Dataset wrapper that also loads ERP RGB images (formerly data/dataset_rgb.py)
-# ---------------------------------------------------------------------------
-
-
-class SoundSpacesDatasetRGB(SoundSpacesDatasetRotated):
-    """Extends the rotated-FOA dataset with ERP RGB images.
-
-    Returns a 5-tuple: (audio, gt_depth, foa_target, energy_map, rgb).
-    The RGB image is loaded from erp_rgb/erp_{idx}.png, converted to
-    float32 [0, 1], and resized to match cfg.dataset.images_size.
-    """
-
-    def __getitem__(self, idx):
-        base = super().__getitem__(idx)
-        audio, gt_depth, foa_target, energy_map = base
-
-        scene, sample_idx = self.samples[idx]
-        rgb_path = os.path.join(
-            self.root_dir, scene, 'erp_rgb', f'erp_{sample_idx}.png')
-
-        img = Image.open(rgb_path).convert('RGB')
-        rgb = torch.from_numpy(
-            np.array(img, dtype=np.float32).transpose(2, 0, 1) / 255.0)
-
-        h, w = int(self.cfg.dataset.images_size[0]), int(self.cfg.dataset.images_size[1])
-        if rgb.shape[1] != h or rgb.shape[2] != w:
-            rgb = F.interpolate(
-                rgb.unsqueeze(0), size=(h, w), mode='bilinear',
-                align_corners=False).squeeze(0)
-
-        return (audio.contiguous(), gt_depth.contiguous(),
-                foa_target.contiguous(), energy_map.contiguous(),
-                rgb.contiguous())
