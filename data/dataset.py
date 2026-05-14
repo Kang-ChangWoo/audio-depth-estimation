@@ -90,6 +90,13 @@ class SoundSpacesDataset(Dataset):
         self.use_rgb = getattr(cfg.dataset, 'use_rgb', False)
         if self.use_rgb and not self.use_ambisonic:
             raise ValueError("use_rgb=True requires use_ambisonic=True")
+        # The RGB branch is at the end of the ambisonic path in __getitem__;
+        # use_waveform and use_distance_bins return earlier, so combining
+        # them with use_rgb would silently drop the RGB tensor. Fail loud.
+        if self.use_rgb and (self.use_waveform or self.use_distance_bins):
+            raise ValueError(
+                "use_rgb is incompatible with use_waveform / use_distance_bins "
+                "(those return before the RGB branch in __getitem__)")
         # Sample-rate assumption for time↔distance conversion. Matches the
         # hardcoded early/mid window boundaries elsewhere in this file
         # (2600 samples ≈ 59ms ≈ 10m round-trip at 343 m/s).
@@ -268,9 +275,11 @@ class SoundSpacesDataset(Dataset):
             self.root_dir, scene, self.depth_dir_name,
             f'{self.depth_type}_depth_{sample_idx}.npy')
         depth = np.load(depth_path).astype(np.float32)
+        # nan_to_num maps NaN->0 and +/-inf->+/-float32_max; the clamps below
+        # then pull those into [0, max_depth] (so +inf ends up at max_depth,
+        # -inf at 0). Explicit `== inf` checks were dead here — nan_to_num
+        # leaves no inf values behind.
         depth = np.nan_to_num(depth)
-        depth[depth == -np.inf] = 0
-        depth[depth == np.inf] = 0
         depth[depth < 0.0] = 0.0
         depth[depth > self.max_depth] = self.max_depth
         gt_depth = torch.from_numpy(depth).unsqueeze(0)
