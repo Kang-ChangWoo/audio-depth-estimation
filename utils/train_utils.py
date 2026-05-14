@@ -23,6 +23,7 @@ from models import (
     EchoRangeDepth,
     DepthLoss, FOAGuidedLoss, SHHistogramAlignmentLoss, AudioDepthFOALoss,
 )
+from models.registry import register_builder, build_model_from_registry
 
 
 # pretrained_vit_foa routing.
@@ -145,211 +146,253 @@ def build_oracle_teacher(ckpt_path, cfg, device, input_nc=3):
         "factory branch, before using oracle distillation.")
 
 
-def build_model(cfg, gpu_ids):
-    """Build model based on config (keep-list configs only after E1)."""
-    model_name = getattr(cfg.model, 'name', 'unet_baseline')
+@register_builder("audio_depth_foa")
+def _build_audio_depth_foa(cfg, gpu_ids):
+    num_downs = 7 if cfg.model.generator == 'unet_128' else 8
+    net = AudioDepthFOAGenerator(
+        cfg, input_nc=2, output_nc=1, num_downs=num_downs, ngf=64,
+        use_dropout=False,
+        proj_dim=getattr(cfg.model, 'proj_dim', 128),
+        foa_dim=getattr(cfg.model, 'foa_dim', 4),
+        sh_order=getattr(cfg.model, 'sh_order', 5),
+        scale_shift_hidden=getattr(cfg.model, 'scale_shift_hidden', 256),
+        scale_shift_layers=getattr(cfg.model, 'scale_shift_layers', 4),
+        H_erp=int(cfg.dataset.images_size[0]),
+        W_erp=int(cfg.dataset.images_size[1]),
+    )
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
 
-    if model_name == 'audio_depth_foa':
-        num_downs = 7 if cfg.model.generator == 'unet_128' else 8
-        net = AudioDepthFOAGenerator(
-            cfg, input_nc=2, output_nc=1, num_downs=num_downs, ngf=64,
-            use_dropout=False,
-            proj_dim=getattr(cfg.model, 'proj_dim', 128),
-            foa_dim=getattr(cfg.model, 'foa_dim', 4),
-            sh_order=getattr(cfg.model, 'sh_order', 5),
-            scale_shift_hidden=getattr(cfg.model, 'scale_shift_hidden', 256),
-            scale_shift_layers=getattr(cfg.model, 'scale_shift_layers', 4),
-            H_erp=int(cfg.dataset.images_size[0]),
-            W_erp=int(cfg.dataset.images_size[1]),
-        )
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'echonet':
-        net = EchoNet(
-            cfg,
-            input_nc=2,
-            output_nc=1,
-            conv1x1_dim=getattr(cfg.model, 'conv1x1_dim', 8),
-            bottleneck_dim=getattr(cfg.model, 'bottleneck_dim', 512),
-        )
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'batvision':
-        num_downs = 7 if cfg.model.generator == 'unet_128' else 8
-        net = BatVisionUNet(
-            cfg,
-            input_nc=2,
-            output_nc=1,
-            num_downs=num_downs,
-            ngf=getattr(cfg.model, 'ngf', 64),
-            use_dropout=getattr(cfg.model, 'use_dropout', False),
-        )
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'echodiffusion':
-        net = EchoDiffusion(
-            max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
-            embed_dim=getattr(cfg.model, 'embed_dim', 192),
-            emb_dim=getattr(cfg.model, 'emb_dim', 768),
-        )
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'echorange':
-        # EchoDiffusion backbone + switchable scalar/range/hazard depth head.
-        # depth_head_type='scalar' (default) reproduces echodiffusion exactly.
-        net = EchoRangeDepth(
-            max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
-            embed_dim=getattr(cfg.model, 'embed_dim', 192),
-            emb_dim=getattr(cfg.model, 'emb_dim', 768),
-            depth_head_type=str(getattr(cfg.model, 'depth_head_type', 'scalar')),
-            range_num_bins=int(getattr(cfg.model, 'range_num_bins', 64)),
-            range_bin_spacing=str(getattr(cfg.model, 'range_bin_spacing', 'log')),
-            range_min_depth=float(getattr(cfg.model, 'range_min_depth', 0.1)),
-            range_max_depth=float(getattr(cfg.model, 'range_max_depth', 20.0)),
-            range_output_mode=str(getattr(cfg.model, 'range_output_mode', 'expectation')),
-            hazard_bias_init=float(getattr(cfg.model, 'hazard_bias_init', -4.6)),
-        )
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'echodiffusion_ambi':
-        kwargs = dict(
-            max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
-            embed_dim=getattr(cfg.model, 'embed_dim', 192),
-            emb_dim=getattr(cfg.model, 'emb_dim', 768),
-            K=int(getattr(cfg.model, 'K', 8)),
-            foa_mode=str(getattr(cfg.model, 'foa_mode', 'condition')),
-            gate_init=float(getattr(cfg.model, 'gate_init', 2.0)),
-            use_cide=bool(getattr(cfg.model, 'use_cide', False)),
-        )
-        if hasattr(cfg.model, 'gate_mask'):
-            kwargs['gate_mask'] = cfg.model.gate_mask
-        net = EchoDiffusionAmbi(cfg, **kwargs)
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'echodiff_sh_side_plus':
-        net = EchoDiffusionSHSidePlus(
-            cfg,
-            max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
-            embed_dim=getattr(cfg.model, 'embed_dim', 192),
-            K=int(getattr(cfg.model, 'K', 8)),
-            rep_hidden=int(getattr(cfg.model, 'rep_hidden', 512)),
-            unet_channels=int(getattr(cfg.model, 'unet_channels', 64)),
-            decoder_channels=list(getattr(cfg.model, 'decoder_channels',
-                                          [256, 128, 64])),
-            side_fusion=bool(getattr(cfg.model, 'side_fusion', True)),
-            oracle_mode=bool(getattr(cfg.model, 'oracle_mode', False)),
-            oracle_gate_mode=str(getattr(cfg.model, 'oracle_gate_mode', 'ones')),
-        )
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'echodiffusion_ambi_sh':
-        net = EchoDiffusionAmbiSH(
-            cfg,
-            max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
-            embed_dim=getattr(cfg.model, 'embed_dim', 192),
-            emb_dim=getattr(cfg.model, 'emb_dim', 768),
-            K=int(getattr(cfg.model, 'K', 8)),
-            sh_order=int(getattr(cfg.model, 'sh_order', 5)),
-            sh_hidden=int(getattr(cfg.model, 'sh_hidden', 256)),
-            unet_channels=int(getattr(cfg.model, 'unet_channels', 64)),
-            decoder_channels=list(getattr(cfg.model, 'decoder_channels',
-                                          [256, 128, 64])),
-            use_cide=bool(getattr(cfg.model, 'use_cide', False)),
-        )
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'vit_baseline':
-        img_size = tuple(int(s) for s in cfg.dataset.images_size)
-        net = AudioDepthViT(
-            cfg,
-            img_size=img_size,
-            patch_size=getattr(cfg.model, 'patch_size', 16),
-            in_chans=2,
-            embed_dim=getattr(cfg.model, 'embed_dim', 768),
-            depth=getattr(cfg.model, 'depth', 12),
-            num_heads=getattr(cfg.model, 'num_heads', 12),
-            mlp_ratio=getattr(cfg.model, 'mlp_ratio', 4.0),
-            drop_rate=getattr(cfg.model, 'drop_rate', 0.0),
-            attn_drop_rate=getattr(cfg.model, 'attn_drop_rate', 0.0),
-        )
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'pretrained_vit':
-        net = PretrainedViT(
-            cfg,
-            input_nc=2,
-            pretrained=getattr(cfg.model, 'pretrained', True),
-            freeze_encoder=getattr(cfg.model, 'freeze_encoder', False),
-        )
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name in _PVITFOA_CLASSES:
-        cls = _PVITFOA_CLASSES[model_name]
-        default_input_nc = 3 if model_name in _PVITFOA_ORACLE_CLASSES else 2
-        kwargs = dict(
-            input_nc=int(getattr(cfg.model, 'input_nc', default_input_nc)),
-            pretrained=getattr(cfg.model, 'pretrained', True),
-            freeze_encoder=getattr(cfg.model, 'freeze_encoder', False),
-        )
-        for k in ('sh_dim', 'head_hidden', 'n_early', 'taps',
-                  'n_slots', 'num_heads',
-                  'proj_dim', 'foa_dim', 'sh_order',
-                  'scale_shift_hidden', 'scale_shift_layers'):
-            if hasattr(cfg.model, k):
-                kwargs[k] = getattr(cfg.model, k)
-        net = cls(cfg, **kwargs)
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    elif model_name == 'pretrained_resnet':
-        net = PretrainedResNet(
-            cfg,
-            input_nc=2,
-            pretrained=getattr(cfg.model, 'pretrained', True),
-            freeze_encoder=getattr(cfg.model, 'freeze_encoder', False),
-        )
-        if len(gpu_ids) > 0:
-            assert torch.cuda.is_available()
-            net = net.to(gpu_ids[0])
-            net = nn.DataParallel(net, gpu_ids)
-        return net
-    else:
-        return define_G(cfg, input_nc=2, output_nc=1, ngf=64,
-                        netG=cfg.model.generator, norm='batch',
-                        use_dropout=False, init_type='normal',
-                        init_gain=0.02, gpu_ids=gpu_ids)
+
+@register_builder("echonet")
+def _build_echonet(cfg, gpu_ids):
+    net = EchoNet(
+        cfg,
+        input_nc=2,
+        output_nc=1,
+        conv1x1_dim=getattr(cfg.model, 'conv1x1_dim', 8),
+        bottleneck_dim=getattr(cfg.model, 'bottleneck_dim', 512),
+    )
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+@register_builder("batvision")
+def _build_batvision(cfg, gpu_ids):
+    num_downs = 7 if cfg.model.generator == 'unet_128' else 8
+    net = BatVisionUNet(
+        cfg,
+        input_nc=2,
+        output_nc=1,
+        num_downs=num_downs,
+        ngf=getattr(cfg.model, 'ngf', 64),
+        use_dropout=getattr(cfg.model, 'use_dropout', False),
+    )
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+@register_builder("echodiffusion")
+def _build_echodiffusion(cfg, gpu_ids):
+    net = EchoDiffusion(
+        max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
+        embed_dim=getattr(cfg.model, 'embed_dim', 192),
+        emb_dim=getattr(cfg.model, 'emb_dim', 768),
+    )
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+@register_builder("echorange")
+def _build_echorange(cfg, gpu_ids):
+    # EchoDiffusion backbone + switchable scalar/range/hazard depth head.
+    # depth_head_type='scalar' (default) reproduces echodiffusion exactly.
+    net = EchoRangeDepth(
+        max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
+        embed_dim=getattr(cfg.model, 'embed_dim', 192),
+        emb_dim=getattr(cfg.model, 'emb_dim', 768),
+        depth_head_type=str(getattr(cfg.model, 'depth_head_type', 'scalar')),
+        range_num_bins=int(getattr(cfg.model, 'range_num_bins', 64)),
+        range_bin_spacing=str(getattr(cfg.model, 'range_bin_spacing', 'log')),
+        range_min_depth=float(getattr(cfg.model, 'range_min_depth', 0.1)),
+        range_max_depth=float(getattr(cfg.model, 'range_max_depth', 20.0)),
+        range_output_mode=str(getattr(cfg.model, 'range_output_mode', 'expectation')),
+        hazard_bias_init=float(getattr(cfg.model, 'hazard_bias_init', -4.6)),
+    )
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+@register_builder("echodiffusion_ambi")
+def _build_echodiffusion_ambi(cfg, gpu_ids):
+    kwargs = dict(
+        max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
+        embed_dim=getattr(cfg.model, 'embed_dim', 192),
+        emb_dim=getattr(cfg.model, 'emb_dim', 768),
+        K=int(getattr(cfg.model, 'K', 8)),
+        foa_mode=str(getattr(cfg.model, 'foa_mode', 'condition')),
+        gate_init=float(getattr(cfg.model, 'gate_init', 2.0)),
+        use_cide=bool(getattr(cfg.model, 'use_cide', False)),
+    )
+    if hasattr(cfg.model, 'gate_mask'):
+        kwargs['gate_mask'] = cfg.model.gate_mask
+    net = EchoDiffusionAmbi(cfg, **kwargs)
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+@register_builder("echodiff_sh_side_plus")
+def _build_echodiff_sh_side_plus(cfg, gpu_ids):
+    net = EchoDiffusionSHSidePlus(
+        cfg,
+        max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
+        embed_dim=getattr(cfg.model, 'embed_dim', 192),
+        K=int(getattr(cfg.model, 'K', 8)),
+        rep_hidden=int(getattr(cfg.model, 'rep_hidden', 512)),
+        unet_channels=int(getattr(cfg.model, 'unet_channels', 64)),
+        decoder_channels=list(getattr(cfg.model, 'decoder_channels',
+                                      [256, 128, 64])),
+        side_fusion=bool(getattr(cfg.model, 'side_fusion', True)),
+        oracle_mode=bool(getattr(cfg.model, 'oracle_mode', False)),
+        oracle_gate_mode=str(getattr(cfg.model, 'oracle_gate_mode', 'ones')),
+    )
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+@register_builder("echodiffusion_ambi_sh")
+def _build_echodiffusion_ambi_sh(cfg, gpu_ids):
+    net = EchoDiffusionAmbiSH(
+        cfg,
+        max_depth=getattr(cfg.model, 'max_depth', cfg.dataset.max_depth),
+        embed_dim=getattr(cfg.model, 'embed_dim', 192),
+        emb_dim=getattr(cfg.model, 'emb_dim', 768),
+        K=int(getattr(cfg.model, 'K', 8)),
+        sh_order=int(getattr(cfg.model, 'sh_order', 5)),
+        sh_hidden=int(getattr(cfg.model, 'sh_hidden', 256)),
+        unet_channels=int(getattr(cfg.model, 'unet_channels', 64)),
+        decoder_channels=list(getattr(cfg.model, 'decoder_channels',
+                                      [256, 128, 64])),
+        use_cide=bool(getattr(cfg.model, 'use_cide', False)),
+    )
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+@register_builder("vit_baseline")
+def _build_vit_baseline(cfg, gpu_ids):
+    img_size = tuple(int(s) for s in cfg.dataset.images_size)
+    net = AudioDepthViT(
+        cfg,
+        img_size=img_size,
+        patch_size=getattr(cfg.model, 'patch_size', 16),
+        in_chans=2,
+        embed_dim=getattr(cfg.model, 'embed_dim', 768),
+        depth=getattr(cfg.model, 'depth', 12),
+        num_heads=getattr(cfg.model, 'num_heads', 12),
+        mlp_ratio=getattr(cfg.model, 'mlp_ratio', 4.0),
+        drop_rate=getattr(cfg.model, 'drop_rate', 0.0),
+        attn_drop_rate=getattr(cfg.model, 'attn_drop_rate', 0.0),
+    )
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+@register_builder("pretrained_vit")
+def _build_pretrained_vit(cfg, gpu_ids):
+    net = PretrainedViT(
+        cfg,
+        input_nc=2,
+        pretrained=getattr(cfg.model, 'pretrained', True),
+        freeze_encoder=getattr(cfg.model, 'freeze_encoder', False),
+    )
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+def _build_pvitfoa(cfg, gpu_ids):
+    model_name = getattr(cfg.model, 'name', 'unet_baseline')
+    cls = _PVITFOA_CLASSES[model_name]
+    default_input_nc = 3 if model_name in _PVITFOA_ORACLE_CLASSES else 2
+    kwargs = dict(
+        input_nc=int(getattr(cfg.model, 'input_nc', default_input_nc)),
+        pretrained=getattr(cfg.model, 'pretrained', True),
+        freeze_encoder=getattr(cfg.model, 'freeze_encoder', False),
+    )
+    for k in ('sh_dim', 'head_hidden', 'n_early', 'taps',
+              'n_slots', 'num_heads',
+              'proj_dim', 'foa_dim', 'sh_order',
+              'scale_shift_hidden', 'scale_shift_layers'):
+        if hasattr(cfg.model, k):
+            kwargs[k] = getattr(cfg.model, k)
+    net = cls(cfg, **kwargs)
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+for _name in _PVITFOA_CLASSES:
+    register_builder(_name)(_build_pvitfoa)
+
+
+@register_builder("pretrained_resnet")
+def _build_pretrained_resnet(cfg, gpu_ids):
+    net = PretrainedResNet(
+        cfg,
+        input_nc=2,
+        pretrained=getattr(cfg.model, 'pretrained', True),
+        freeze_encoder=getattr(cfg.model, 'freeze_encoder', False),
+    )
+    if len(gpu_ids) > 0:
+        assert torch.cuda.is_available()
+        net = net.to(gpu_ids[0])
+        net = nn.DataParallel(net, gpu_ids)
+    return net
+
+
+@register_builder("unet_baseline")
+def _build_unet_baseline(cfg, gpu_ids):
+    return define_G(cfg, input_nc=2, output_nc=1, ngf=64,
+                    netG=cfg.model.generator, norm='batch',
+                    use_dropout=False, init_type='normal',
+                    init_gain=0.02, gpu_ids=gpu_ids)
+
+
+def build_model(cfg, gpu_ids):
+    """Dispatch to the registered builder for cfg.model.name."""
+    return build_model_from_registry(cfg, gpu_ids)
 
 
 def build_depth_criterion(cfg, device):
