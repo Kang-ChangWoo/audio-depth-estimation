@@ -22,8 +22,7 @@ from .echonet import EchoNet
 from .batvision import BatVisionUNet
 from .pretrain import (
     PretrainedViT, PretrainedResNet,
-    PretrainedViTFOA, PretrainedViTFOAV3,
-    PretrainedViTFOAV6EAttn, PretrainedViTFOAV6MSSH, PretrainedViTFOAV6OracleNC3,
+    PretrainedViTFOA,
 )
 from .vit import AudioDepthViT
 from .losses import (

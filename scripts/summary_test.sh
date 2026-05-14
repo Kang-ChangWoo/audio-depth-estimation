@@ -22,7 +22,6 @@ mkdir -p "$LOG_DIR"
 get_config() {
     local dir="$1"
     case "$dir" in
-        *pretrained_vit_foa_v3*) echo "pretrain_vit_foa_v3" ;;
         *pretrained_vit_foa*)    echo "pretrain_vit_foa" ;;
         *pretrained_vit*)        echo "pretrain_vit" ;;
         *pretrained_resnet*)     echo "pretrain_resnet" ;;

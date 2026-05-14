@@ -20,8 +20,6 @@ from models import (
     define_G, AudioDepthFOAGenerator, EchoDiffusion, EchoDiffusionAmbi, EchoDiffusionAmbiSH, EchoNet,
     EchoDiffusionSHSidePlus,
     BatVisionUNet, PretrainedViT, PretrainedViTFOA, PretrainedResNet, AudioDepthViT,
-    PretrainedViTFOAV3,
-    PretrainedViTFOAV6EAttn, PretrainedViTFOAV6MSSH, PretrainedViTFOAV6OracleNC3,
     EchoRangeDepth,
     DepthLoss, FOAGuidedLoss, SHHistogramAlignmentLoss, AudioDepthFOALoss,
 )
@@ -36,9 +34,6 @@ from models import (
 # the kept names so train.py's loss/branch selection works.
 _PVITFOA_AUX_SH_NAMES = {
     'pretrained_vit_foa',
-    'pretrained_vit_foa_v3',
-    'pretrained_vit_foa_v6_eattn',
-    'pretrained_vit_foa_v6_mssh',
     # EchoDiffusion + SH side-prior (merged into models/echodiffusion/ in H1).
     'echodiff_sh_side_plus',
     # echodiffusion_ambi family — bin-gated FOA conditioning paths.
@@ -49,17 +44,11 @@ _PVITFOA_HIST_NAMES = set()
 
 _PVITFOA_CLASSES = {
     'pretrained_vit_foa':    PretrainedViTFOA,
-    'pretrained_vit_foa_v3': PretrainedViTFOAV3,
-    'pretrained_vit_foa_v6_eattn':      PretrainedViTFOAV6EAttn,
-    'pretrained_vit_foa_v6_mssh':       PretrainedViTFOAV6MSSH,
-    'pretrained_vit_foa_v6_oracle_nc3': PretrainedViTFOAV6OracleNC3,
 }
 
 # ViT-backbone oracle: input assembly via cat(audio, energy_map) but
 # built through the _PVITFOA_CLASSES branch in build_model (ViT-specific kwargs).
-_PVITFOA_ORACLE_CLASSES = {
-    'pretrained_vit_foa_v6_oracle_nc3': PretrainedViTFOAV6OracleNC3,
-}
+_PVITFOA_ORACLE_CLASSES = {}
 
 
 def is_foa_0415_model(cfg):

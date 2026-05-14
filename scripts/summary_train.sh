@@ -264,13 +264,11 @@ train_foa0415() {
 }
 
 # ============================================================
-# GROUP: pvitvoa — Pretrained ViT + FOA v1/v3 (4 experiments, 40 epochs)
+# GROUP: pvitvoa — Pretrained ViT + FOA v1 (2 experiments, 40 epochs)
 # ============================================================
 train_pvitvoa() {
     run_train pretrain_vit_foa   exp160_pvitfoav1_lr1e4_w0.1 40 0.0001 16 --rotate-canonical
     run_train pretrain_vit_foa   exp161_pvitfoav1_lr5e5_w0.3 40 0.00005 16 --rotate-canonical
-    run_train pretrain_vit_foa_v3 exp164_pvitfoav3_lr1e4_w0.1 40 0.0001 16 --rotate-canonical
-    run_train pretrain_vit_foa_v3 exp165_pvitfoav3_lr5e5_w0.3 40 0.00005 16 --rotate-canonical
 }
 
 # ============================================================
