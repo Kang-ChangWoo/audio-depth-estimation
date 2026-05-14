@@ -1,6 +1,0 @@
-method_name,code_path,config_path,related_logs,related_checkpoints,related_results,status
-BatVision,models/batvision/batvision.py,config/batvision.yaml,count=0,count=0,count=0,keep
-EchoNet,models/echonet/echonet.py,config/echonet.yaml,count=0,count=11,count=11,keep
-EchoDiffusion,models/echodiffusion/echodiffusion.py,config/echodiffusion.yaml,count=0,count=25,count=29,keep
-EchoDiffusion-Ambi,models/echodiffusion/echodiffusion_ambi.py,config/echodiffusion_ambi.yaml;config/echodiffusion_ambi_cide.yaml,count=0,count=27,count=27,keep
-EchoDiffusion-Ambi-SH,models/echodiffusion/echodiffusion_ambi_sh.py,config/echodiffusion_ambi_sh.yaml,count=0,count=10,count=10,keep

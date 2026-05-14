@@ -3,86 +3,86 @@
 Depth estimation from binaural / ambisonics echoes on the SoundSpaces dataset.
 
 Active line: **EchoRange** (bin-based radial depth, `models/bin_based/`).
-Comparison baselines: **BatVision**, **EchoNet**, **EchoDiffusion**, **EchoDiffusion-Ambi (+SH)**, **EchoDiffusion-SH-Side(+)**.
+Comparison baselines: **BatVision**, **EchoNet**, **EchoDiffusion**, **EchoDiffusion-Ambi (+SH)**, **EchoDiffusion-SH-Side+** — all under `comparison_methods/`.
 
 ## Structure
 
 ```
 ├── train.py, test.py, config.yaml
-├── data/                      # SoundSpacesDataset, dataloader, SH basis (out of cleanup scope)
-├── models/
-│   ├── unet_foa.py            # Ours v0 — simplest first attempt (preserved separately)
-│   ├── unet.py, vit.py        # Backbones for baseline.yaml / vit.yaml
-│   ├── losses.py              # SILog, BerHu, depth, FOA-guided, SH-histogram, KL-reg
-│   ├── bin_based/             # Ours main: EchoRangeDepth, RangeDepthHead, spherical_loss
-│   ├── batvision/             # Comparison baseline
-│   ├── echonet/               # Comparison baseline
-│   ├── echodiffusion/         # Comparison baseline (+ Ambi, Ambi-SH, SH-Side+)
-│   └── pretrain/              # Pretrained ResNet/ViT/ViT-FOA base backbones
-├── utils/                     # config, metrics, visualization, train_utils, test_utils
-├── scripts/                   # Training/test/sweep shell scripts + paired_bootstrap.py
-├── docs/                      # EXPERIMENT_NARRATIVE.md, REPRODUCIBILITY.md, results/*.csv
-├── archive/                   # Cleanup artifacts — see below
-├── checkpoints/, results/     # gitignored runtime outputs
-└── logs/                      # Training/test logs (residuals after archive moves)
+├── data/                  # dataset.py, dataloader.py, sh_basis.py
+├── models/                # ours / shared code only
+│   ├── unet_foa.py        # Ours v0 — simplest first attempt
+│   ├── unet.py, vit.py    # Backbones for baseline.yaml / vit.yaml
+│   ├── losses.py
+│   ├── registry.py        # @register_builder model registry
+│   ├── bin_based/         # Ours main: EchoRangeDepth, RangeDepthHead, spherical_loss
+│   └── pretrain/          # Pretrained ResNet / ViT / ViT-FOA backbones
+├── comparison_methods/    # External comparison baselines (kept separate from ours)
+│   ├── batvision/
+│   ├── echonet/
+│   └── echodiffusion/     # EchoDiffusion + Ambi + Ambi-SH + SH-Side+
+├── utils/                 # config, metrics, visualization, train_utils, test_utils
+├── scripts/               # train.sh, test.sh, summary_*, paired_bootstrap.py
+├── config/                # 9 active model configs
+├── runs/                  # gitignored — per-run packages (train.py auto-writes)
+└── logs/                  # training / test logs
 ```
 
-Older trial code (10 subpackages + 14 one-off variants from n1/n2/n3/n4/n9/renew/pretrain v2-v6 families) was moved out of the repo to a sibling directory at `../baseline_deprecated/models/` to keep `baseline/` lean. That tree is not git-tracked; refer back to git history (commits before the move) if you need the previous in-tree layout.
+Set aside in the sibling directory `../baseline_deprecated/` (not git-tracked):
+- `models/` — 10 deprecated trial subpackages + one-off variants (n1/n2/n3/n4/n9/renew/pretrain v2–v6)
+- `data/dataset_n2.py` — N2-feature dataset for the deprecated n2_0417 line
+- `archive/` — historical experiment index (run/comparison/delete CSVs) + 41 packaged runs
+- `docs/` — EXPERIMENT_NARRATIVE.md, REPRODUCIBILITY.md, ledger CSVs
+
+For previous in-tree layouts, refer to git history before the relevant move commit.
 
 ## Quick Start
 
 ```bash
-# Train
-python train.py --config config/echorange.yaml
+mkdir -p runs                       # first run only
 
-# Test
-python test.py --config config/echorange.yaml --eval-on test --checkpoints best
+# Train — writes runs/<experiment-name>/{checkpoints,results,config_resolved.yaml,...}
+python train.py --config echorange --experiment-name 20260514_001_echorange_seed0
 
-# Or shell scripts
-bash scripts/train.sh
-bash scripts/test.sh
+# Test — reads runs/<experiment-name>/checkpoints/ by default
+python test.py --config echorange --experiment-name 20260514_001_echorange_seed0 \
+    --eval-on test --checkpoints best
 ```
 
-CLI arguments override values in `config/<name>.yaml`.
+CLI arguments override `config/<name>.yaml`.
 
-## Archive (`archive/`)
+## Experiment workflow
 
-Generated during the 2026-05-13 cleanup. Indexes meaningful historical runs without bloating active source.
+The repo is config-driven, not copy-driven — keep code small, grow experiments via config + run dirs.
 
-```
-archive/
-├── README.md                      # cleanup methodology + column dictionary
-├── runs.csv                       # 433 unique runs: role / era / status / paths / git_commit
-├── comparison_baselines.csv       # 5 comparison methods → code/config/logs/ckpts
-├── delete_candidates.csv          # paths flagged for review (safe_to_delete default = no)
-├── artifacts.csv                  # orphan artifacts not matched to any ledger run
-└── runs/<exp_id>/                 # 41 packaged runs
-    ├── manifest.yaml              # run metadata + raw ledger metrics
-    ├── config.yaml                # the config used at run time
-    ├── logs/                      # train + test logs
-    ├── checkpoints/, results/     # gitignored heavy artifacts (moved from top-level)
-    └── code_ref/{git_commit.txt, source_files.txt}
-                                   # the canonical way to reproduce: check out git_commit
-```
+- **New model** → add a class + `@register_builder("name")` in its module; `models/registry.py` dispatches on `cfg.model.name`. No if/elif edits, no `unet_v1/v2/final` files.
+- **Model variant** → pass CLI overrides (`--lambda-sh`, `--range-num-bins`, …) instead of forking a new YAML. `config/` holds one YAML per model family (9 total).
+- **Every run** → `train.py` auto-writes `runs/<experiment-name>/` with `config_resolved.yaml`, `command.sh`, `git_commit.txt`, `git_diff.patch`, `meta.json`, plus `checkpoints/` and `results/`. That package is the provenance record.
+- **Run naming** → recommended `YYYYMMDD_RUNID_METHOD_KEYCHANGE_SEED`, e.g. `20260514_004_echorange_radial_depth_seed0`.
 
-To reproduce an archived run, check out the commit in `code_ref/git_commit.txt` and re-run with `config.yaml`. The active codebase intentionally does **not** carry per-run code snapshots.
+## Active configs (9)
 
-## Cleanup History (2026-05-13)
-
-Master was tidied across phases A–F:
-
-| Phase | What changed | Result |
+| config | model | role |
 |---|---|---|
-| A | Generated archive indexes (4 CSVs) | 0 mutation |
-| B | Moved 54 meaningful run dirs into `archive/runs/<id>/` | logs/ckpts/results consolidated |
-| C | Removed `__pycache__/` + empty checkpoint dirs | 73 paths |
-| D | Moved one stray `foa_v2_js_0415.py` to `models/deprecated/` | 1 file |
-| E1 | Slimmed `models/__init__.py` (57→32 lines), moved 10 trial subpackages + 12 top-level foa variants to `models/deprecated/` | active surface ~25 files |
-| E2 | De-duplicated `runs.csv` (484 → 433 rows), removed 13 manifest-only orphan dirs | clean index |
-| F1 | `n2_0427/echodiff_sh_side.py` → `deprecated/` (no archived runs) | 1 file |
-| F2 | Removed 28 dead bulk/legacy scripts | scripts/ 40 → 11 |
-| F3 | Deleted `qual/` entirely | ~788 MB freed |
-| F5 | Removed top-level `audio_depth_experiment_ledger.csv`, `audio_depth_experiment_kb.md`, `make_qual.py` (digested into `archive/`) | 3 files |
-| F6 | Cleared residual `results/`, `eval/` filesystem content | ~78 GB freed (.gitignored) |
+| `echorange` | EchoRangeDepth | **ours main** — radial bin-based |
+| `foa` | AudioDepthFOAGenerator | ours v0 — simplest first attempt |
+| `baseline` | UnetGenerator | plain UNet baseline |
+| `vit` | AudioDepthViT | ViT baseline |
+| `batvision` | BatVisionUNet | comparison baseline |
+| `echonet` | EchoNet | comparison baseline |
+| `pretrain_resnet` / `pretrain_vit` / `pretrain_vit_foa` | Pretrained* | pretrained backbones |
+
+EchoDiffusion-family configs live only in `../baseline_deprecated/archive/runs/<id>/config.yaml` — copy one back into `config/` to re-run those baselines.
+
+## Cleanup history (2026-05-13 → 2026-05-14)
+
+The repo was reorganized from a flat trial-dump into a config-driven, run-packaged layout:
+
+- **Archive pass** — indexed 433 runs, packaged 41 meaningful ones, removed dead scripts/configs/logs/qual, moved 10 trial model subpackages + the experiment ledger/KB out of the tree. Freed ~80 GB.
+- **data/ consolidation** — merged 4 dataset files into `data/dataset.py`; moved `dataset_n2.py` out.
+- **Stage 1 — model registry** — `utils/train_utils.py` if/elif → `@register_builder` functions.
+- **Stage 2 — run packaging** — `train.py`/`test.py` now read/write `runs/<experiment-name>/` instead of flat `checkpoints/<exp_name>/`.
+- **Stage 3 — comparison split** — comparison baselines moved from `models/` to `comparison_methods/`.
+- **archive/ + docs/** — moved to `../baseline_deprecated/` (kept as reference, separate from active experiment code).
 
 Comparison baselines and the ours-v0 file (`unet_foa.py`) were preserved as standalone code throughout.
