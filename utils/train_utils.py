@@ -41,7 +41,7 @@ _PVITFOA_AUX_SH_NAMES = {
     'pretrained_vit_foa_v5',
     'pretrained_vit_foa_v6_eattn',
     'pretrained_vit_foa_v6_mssh',
-    # n2_0427 — EchoDiffusion + SH side-prior (Plus only after F1).
+    # EchoDiffusion + SH side-prior (merged into models/echodiffusion/ in H1).
     'echodiff_sh_side_plus',
     # echodiffusion_ambi family — bin-gated FOA conditioning paths.
     'echodiffusion_ambi',

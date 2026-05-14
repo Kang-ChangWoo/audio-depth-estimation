@@ -13,9 +13,11 @@ selects ``vit_baseline`` (-> AudioDepthViT from .vit).
 
 from .unet import UnetGenerator, UnetSkipConnectionBlock, define_G
 from .unet_foa import AudioDepthFOAGenerator, DeepScaleShift
-from .echodiffusion import EchoDiffusion, EchoDiffusionAmbi, EchoDiffusionAmbiSH
+from .echodiffusion import (
+    EchoDiffusion, EchoDiffusionAmbi, EchoDiffusionAmbiSH,
+    EchoDiffusionSHSidePlus,
+)
 from .bin_based import EchoRangeDepth, RangeDepthHead, soft_range_nll_loss
-from .n2_0427 import EchoDiffusionSHSidePlus
 from .echonet import EchoNet
 from .batvision import BatVisionUNet
 from .pretrain import (
