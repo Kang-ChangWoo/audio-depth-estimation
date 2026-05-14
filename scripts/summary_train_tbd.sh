@@ -80,14 +80,10 @@ train_foa_missing() {
 }
 
 # ============================================================
-# GROUP: pvitvoa — 4 incomplete/never-started ViT FOA experiments
+# GROUP: pvitvoa — deprecated in Phase H2 (v4/v5 moved to models/deprecated/)
 # ============================================================
 train_pvitvoa_tbd() {
-    echo "=== PreViT+FOA: v4 (stalled) + v5 (never started) ==="
-    run_train pretrain_vit_foa_v4 exp166_pvitfoav4_lr1e4_w0.1 40 0.0001 16 --rotate-canonical
-    run_train pretrain_vit_foa_v4 exp167_pvitfoav4_lr5e5_w0.3 40 0.00005 16 --rotate-canonical
-    run_train pretrain_vit_foa_v5 exp168_pvitfoav5_lr1e4_w0.1 40 0.0001 16 --rotate-canonical
-    run_train pretrain_vit_foa_v5 exp169_pvitfoav5_lr5e5_w0.3 40 0.00005 16 --rotate-canonical
+    echo "=== PreViT+FOA: v4/v5 deprecated in Phase H2 (no longer scheduled) ==="
 }
 
 # ============================================================

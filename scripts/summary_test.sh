@@ -23,9 +23,6 @@ get_config() {
     local dir="$1"
     case "$dir" in
         *pretrained_vit_foa_v3*) echo "pretrain_vit_foa_v3" ;;
-        *pretrained_vit_foa_v2*) echo "pretrain_vit_foa_v2" ;;
-        *pretrained_vit_foa_v4*) echo "pretrain_vit_foa_v4" ;;
-        *pretrained_vit_foa_v5*) echo "pretrain_vit_foa_v5" ;;
         *pretrained_vit_foa*)    echo "pretrain_vit_foa" ;;
         *pretrained_vit*)        echo "pretrain_vit" ;;
         *pretrained_resnet*)     echo "pretrain_resnet" ;;

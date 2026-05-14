@@ -20,7 +20,7 @@ from models import (
     define_G, AudioDepthFOAGenerator, EchoDiffusion, EchoDiffusionAmbi, EchoDiffusionAmbiSH, EchoNet,
     EchoDiffusionSHSidePlus,
     BatVisionUNet, PretrainedViT, PretrainedViTFOA, PretrainedResNet, AudioDepthViT,
-    PretrainedViTFOAV2, PretrainedViTFOAV3, PretrainedViTFOAV4, PretrainedViTFOAV5,
+    PretrainedViTFOAV3,
     PretrainedViTFOAV6EAttn, PretrainedViTFOAV6MSSH, PretrainedViTFOAV6OracleNC3,
     EchoRangeDepth,
     DepthLoss, FOAGuidedLoss, SHHistogramAlignmentLoss, AudioDepthFOALoss,
@@ -37,8 +37,6 @@ from models import (
 _PVITFOA_AUX_SH_NAMES = {
     'pretrained_vit_foa',
     'pretrained_vit_foa_v3',
-    'pretrained_vit_foa_v4',
-    'pretrained_vit_foa_v5',
     'pretrained_vit_foa_v6_eattn',
     'pretrained_vit_foa_v6_mssh',
     # EchoDiffusion + SH side-prior (merged into models/echodiffusion/ in H1).
@@ -47,16 +45,11 @@ _PVITFOA_AUX_SH_NAMES = {
     'echodiffusion_ambi',
     'echodiffusion_ambi_sh',
 }
-_PVITFOA_HIST_NAMES = {
-    'pretrained_vit_foa_v2',
-}
+_PVITFOA_HIST_NAMES = set()
 
 _PVITFOA_CLASSES = {
     'pretrained_vit_foa':    PretrainedViTFOA,
-    'pretrained_vit_foa_v2': PretrainedViTFOAV2,
     'pretrained_vit_foa_v3': PretrainedViTFOAV3,
-    'pretrained_vit_foa_v4': PretrainedViTFOAV4,
-    'pretrained_vit_foa_v5': PretrainedViTFOAV5,
     'pretrained_vit_foa_v6_eattn':      PretrainedViTFOAV6EAttn,
     'pretrained_vit_foa_v6_mssh':       PretrainedViTFOAV6MSSH,
     'pretrained_vit_foa_v6_oracle_nc3': PretrainedViTFOAV6OracleNC3,
@@ -121,12 +114,12 @@ def is_foa_model(cfg):
 
 
 def is_foa_variant_model(cfg):
-    """Post-E1: legacy UNet FOA variants moved; only pretrained_vit_foa_v2 remains."""
+    """Post-H2: pretrained_vit_foa_v2 deprecated; no kept FOA-variant models."""
     return getattr(cfg.model, 'name', '') in _PVITFOA_HIST_NAMES
 
 
 def is_foa_v2_js_model(cfg):
-    """Post-E1: foa_v2_js moved; only pretrained_vit_foa_v2 routes via the js path."""
+    """Post-H2: pretrained_vit_foa_v2 deprecated; nothing routes via the js path."""
     return getattr(cfg.model, 'name', '') in _PVITFOA_HIST_NAMES
 
 
@@ -345,9 +338,6 @@ def build_model(cfg, gpu_ids):
                   'scale_shift_hidden', 'scale_shift_layers'):
             if hasattr(cfg.model, k):
                 kwargs[k] = getattr(cfg.model, k)
-        if model_name == 'pretrained_vit_foa_v2':
-            kwargs.setdefault('H_erp', int(cfg.dataset.images_size[0]))
-            kwargs.setdefault('W_erp', int(cfg.dataset.images_size[1]))
         net = cls(cfg, **kwargs)
         if len(gpu_ids) > 0:
             assert torch.cuda.is_available()
