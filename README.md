@@ -17,10 +17,8 @@ Comparison baselines: **BatVision**, **EchoNet**, **EchoDiffusion**, **EchoDiffu
 │   ├── bin_based/             # Ours main: EchoRangeDepth, RangeDepthHead, spherical_loss
 │   ├── batvision/             # Comparison baseline
 │   ├── echonet/               # Comparison baseline
-│   ├── echodiffusion/         # Comparison baseline (+ Ambi, Ambi-SH)
-│   ├── n2_0427/               # EchoDiffusion-SH-Side+
-│   ├── pretrain/              # Pretrained ResNet/ViT/ViT-FOA v1–v6 backbones
-│   └── deprecated/            # Older trial subpackages & one-off variants (kept for reference)
+│   ├── echodiffusion/         # Comparison baseline (+ Ambi, Ambi-SH, SH-Side+)
+│   └── pretrain/              # Pretrained ResNet/ViT/ViT-FOA base backbones
 ├── utils/                     # config, metrics, visualization, train_utils, test_utils
 ├── scripts/                   # Training/test/sweep shell scripts + paired_bootstrap.py
 ├── docs/                      # EXPERIMENT_NARRATIVE.md, REPRODUCIBILITY.md, results/*.csv
@@ -28,6 +26,8 @@ Comparison baselines: **BatVision**, **EchoNet**, **EchoDiffusion**, **EchoDiffu
 ├── checkpoints/, results/     # gitignored runtime outputs
 └── logs/                      # Training/test logs (residuals after archive moves)
 ```
+
+Older trial code (10 subpackages + 14 one-off variants from n1/n2/n3/n4/n9/renew/pretrain v2-v6 families) was moved out of the repo to a sibling directory at `../baseline_deprecated/models/` to keep `baseline/` lean. That tree is not git-tracked; refer back to git history (commits before the move) if you need the previous in-tree layout.
 
 ## Quick Start
 
