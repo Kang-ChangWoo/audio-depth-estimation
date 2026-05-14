@@ -3,6 +3,7 @@ __pycache__/
 *.pyo
 checkpoints/
 results/
+runs/
 eval/
 outputs/
 wandb/

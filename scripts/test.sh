@@ -30,9 +30,9 @@ VIS="${VIS:-100}"
 
 # Auto-discover checkpoint if CKPT not provided.
 if [ -z "${CKPT:-}" ]; then
-    CKPT=$(find checkpoints/ -name "best_model.pth" -path "*${EXP}*" 2>/dev/null | head -1)
+    CKPT=$(find runs/ -name "best_model.pth" -path "*${EXP}*" 2>/dev/null | head -1)
     if [ -z "$CKPT" ]; then
-        echo "ERROR: no checkpoint found for EXP=$EXP under checkpoints/" >&2
+        echo "ERROR: no checkpoint found for EXP=$EXP under runs/" >&2
         exit 1
     fi
 fi

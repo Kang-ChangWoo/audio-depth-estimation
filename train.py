@@ -2,12 +2,18 @@
 """Training script for audio-to-depth estimation."""
 
 import argparse
+import json
 import math
 import os
+import subprocess
+import sys
 import time
+from datetime import datetime
+from types import SimpleNamespace
 
 import numpy as np
 import torch
+import yaml
 # import wandb
 
 from utils.config import load_config
@@ -1242,12 +1248,69 @@ def train(cfg):
         scheduler = None
 
     project_dir = os.path.dirname(os.path.abspath(__file__))
+    # Legacy experiment-name string — kept ONLY for meta.json's
+    # legacy_exp_name field and the wandb meta dict. NOT used for paths.
     exp_name = (f"{cfg.model.generator}_{cfg.dataset.name}_BS{cfg.mode.batch_size}_"
                 f"Lr{lr}_{opt_name}_{cfg.mode.experiment_name}")
-    ckpt_dir = os.path.join(project_dir, 'checkpoints', exp_name)
-    results_dir = os.path.join(project_dir, 'results', exp_name)
+    # Stage 2: per-run package under runs/<experiment_name>/.
+    run_dir = os.path.join(project_dir, 'runs', cfg.mode.experiment_name)
+    ckpt_dir = os.path.join(run_dir, 'checkpoints')
+    results_dir = os.path.join(run_dir, 'results')
     os.makedirs(ckpt_dir, exist_ok=True)
     os.makedirs(results_dir, exist_ok=True)
+
+    # ── Provenance files (written once at startup) ───────────────
+    def _ns_to_dict(obj):
+        if isinstance(obj, SimpleNamespace):
+            return {k: _ns_to_dict(v) for k, v in vars(obj).items()}
+        if isinstance(obj, dict):
+            return {k: _ns_to_dict(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [_ns_to_dict(v) for v in obj]
+        return obj
+
+    try:
+        with open(os.path.join(run_dir, 'config_resolved.yaml'), 'w') as _f:
+            yaml.safe_dump(_ns_to_dict(cfg), _f, default_flow_style=False,
+                           sort_keys=False)
+    except Exception as _e:
+        with open(os.path.join(run_dir, 'config_resolved.txt'), 'w') as _f:
+            _f.write(str(cfg))
+        print(f'  [provenance] config YAML dump failed ({_e}); wrote .txt')
+
+    try:
+        with open(os.path.join(run_dir, 'command.sh'), 'w') as _f:
+            _f.write('#!/bin/bash\n' + 'python ' + ' '.join(sys.argv) + '\n')
+    except Exception as _e:
+        print(f'  [provenance] command.sh failed: {_e}')
+
+    try:
+        _commit = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'],
+                                 cwd=project_dir, capture_output=True,
+                                 text=True).stdout.strip()
+        with open(os.path.join(run_dir, 'git_commit.txt'), 'w') as _f:
+            _f.write(_commit + '\n')
+    except Exception as _e:
+        print(f'  [provenance] git_commit.txt failed: {_e}')
+
+    try:
+        _diff = subprocess.run(['git', 'diff', 'HEAD'], cwd=project_dir,
+                               capture_output=True, text=True).stdout
+        with open(os.path.join(run_dir, 'git_diff.patch'), 'w') as _f:
+            _f.write(_diff)
+    except Exception as _e:
+        print(f'  [provenance] git_diff.patch failed: {_e}')
+
+    try:
+        with open(os.path.join(run_dir, 'meta.json'), 'w') as _f:
+            json.dump({
+                'experiment_name': cfg.mode.experiment_name,
+                'model_name': cfg.model.name,
+                'legacy_exp_name': exp_name,
+                'timestamp': datetime.now().isoformat(),
+            }, _f, indent=2)
+    except Exception as _e:
+        print(f'  [provenance] meta.json failed: {_e}')
 
     # W&B
     wb_cfg = {

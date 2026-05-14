@@ -38,12 +38,11 @@ def test(cfg):
 
     ckpt_path = getattr(cfg.mode, 'checkpoint_path', None)
     if not ckpt_path:
-        # Construct from config (use defaults if lr/optimizer not in test config)
-        lr = getattr(cfg.mode, 'learning_rate', 0.001)
-        opt = getattr(cfg.mode, 'optimizer', 'AdamW')
-        exp_name = (f"{cfg.model.generator}_{cfg.dataset.name}_BS{cfg.mode.batch_size}_"
-                    f"Lr{lr}_{opt}_{cfg.mode.experiment_name}")
-        ckpt_dir = os.path.join(project_dir, 'checkpoints', exp_name)
+        # Stage 2: per-run package under runs/<experiment_name>/. Derives
+        # the checkpoint dir from experiment_name alone — same path the
+        # trainer writes to. Checkpoint filenames are unchanged.
+        ckpt_dir = os.path.join(project_dir, 'runs',
+                                cfg.mode.experiment_name, 'checkpoints')
 
         load_epoch = cfg.mode.checkpoints
         if load_epoch is None or str(load_epoch) == 'best':
@@ -103,13 +102,15 @@ def test(cfg):
         print(f' FOA_DIR: {np.mean([e["foa_dir_cosine"] for e in foa_err]):.4f}')
     print('=' * 60)
 
-    # Determine results directory from checkpoint path
-    ckpt_dir_name = os.path.basename(os.path.dirname(ckpt_path))
-    results_dir = os.path.join(project_dir, 'results', ckpt_dir_name)
+    # Stage 2: results + stats go into the per-run package under
+    # runs/<experiment_name>/results/. Derived from experiment_name alone,
+    # matching the directory the trainer writes to.
+    results_dir = os.path.join(project_dir, 'runs',
+                               cfg.mode.experiment_name, 'results')
     os.makedirs(results_dir, exist_ok=True)
 
     # Save stats
-    stats_dir = os.path.join(project_dir, 'eval', cfg.dataset.name, eval_on)
+    stats_dir = results_dir
     os.makedirs(stats_dir, exist_ok=True)
     stats = {lbl.lower(): torch.tensor(de[:, i])
              for i, lbl in enumerate(labels_uniform)}
@@ -410,9 +411,11 @@ if __name__ == '__main__':
         tag = args.checkpoint_tag
         ckpt_filename = ('best_model.pth' if tag == 'score'
                          else f'best_{tag}.pth')
-        ckpt_dir = os.path.join(
-            cfg.mode.checkpoints if hasattr(cfg.mode, 'checkpoints') else
-            'checkpoints', args.experiment_name)
+        # Stage 2: per-run package — checkpoints live under
+        # runs/<experiment_name>/checkpoints/.
+        _project_dir = os.path.dirname(os.path.abspath(__file__))
+        ckpt_dir = os.path.join(_project_dir, 'runs',
+                                args.experiment_name, 'checkpoints')
         candidate = os.path.join(ckpt_dir, ckpt_filename)
         if os.path.isfile(candidate):
             cfg.mode.checkpoint_path = candidate
