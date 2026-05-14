@@ -1,18 +1,13 @@
 """DataLoader factory."""
 
 from torch.utils.data import DataLoader
-from .dataset import SoundSpacesDataset
-from .dataset_rotated import SoundSpacesDatasetRotated
-from .dataset_n2 import SoundSpacesDatasetN2
-from .dataset_rgb import SoundSpacesDatasetRGB
+from .dataset import SoundSpacesDataset, SoundSpacesDatasetRotated, SoundSpacesDatasetRGB
 
 
 def _select_dataset_class(cfg):
     """Pick dataset class based on config flags."""
     if getattr(cfg.dataset, 'use_rgb', False):
         return SoundSpacesDatasetRGB
-    if getattr(cfg.dataset, 'use_n2_features', False):
-        return SoundSpacesDatasetN2
     if (getattr(cfg.dataset, 'rotate_canonical', False)
             and getattr(cfg.dataset, 'use_ambisonic', False)):
         return SoundSpacesDatasetRotated
